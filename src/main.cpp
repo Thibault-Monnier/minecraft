@@ -58,6 +58,7 @@ void runGame() {
     float cameraPitch = 0.0f;  // Pitch angle for camera rotation
 
     while (!WindowShouldClose()) {
+        // Calculate camera rotation
         Vector2 mouseDelta = GetMouseDelta();
         cameraYaw += mouseDelta.x * cameraSensitivity;
         cameraPitch -= mouseDelta.y * cameraSensitivity;
@@ -67,8 +68,7 @@ void runGame() {
         Vector3 direction = {cosf(cameraYaw) * cosf(cameraPitch), sinf(cameraPitch),
                              sinf(cameraYaw) * cosf(cameraPitch)};
 
-        camera.target = Vector3Add(camera.position, direction);
-
+        // Update camera position
         float moveForward = 0.0f;
         float moveSide = 0.0f;
         float moveUp = 0.0f;
@@ -89,17 +89,21 @@ void runGame() {
             moveUp = -1.0f;
 
         const float deltaTime = GetFrameTime();
+        const float speedFactor = deltaTime * cameraMovementSpeed;
 
         Vector2 forward2D = {cosf(cameraYaw), sinf(cameraYaw)};
         Vector2 right2D = {forward2D.y, -forward2D.x};
 
-        camera.position.x += (forward2D.x * moveForward + right2D.x * moveSide) *
-                             cameraMovementSpeed * deltaTime;
-        camera.position.z += (forward2D.y * moveForward + right2D.y * moveSide) *
-                             cameraMovementSpeed * deltaTime;
+        camera.position.x += (forward2D.x * moveForward + right2D.x * moveSide) * speedFactor;
+        camera.position.z += (forward2D.y * moveForward + right2D.y * moveSide) * speedFactor;
 
-        camera.position.y += moveUp * cameraMovementSpeed * deltaTime;
+        camera.position.y += moveUp * speedFactor;
 
+        // Update camera target
+        // This is done after updating the position to prevent clipping when it moves
+        camera.target = Vector3Add(camera.position, direction);
+
+        // Render
         drawGame(camera);
     }
 }
