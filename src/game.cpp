@@ -39,13 +39,11 @@ void Game::draw() const {
                 const Vector3 size = {1.0f, 1.0f, 1.0f};
 
                 if (world[x][z][y] == BLOCK_DIRT) {
-                    DrawModel(cubeModel, position, 1.0f, BROWN);
-                    DrawCubeWiresV(position, size,
-                                   DARKBROWN);  // Draw wireframe for better visibility
+                    DrawCubeV(position, size, BROWN);
+                    DrawCubeWiresV(position, size, DARKBROWN);
                 } else if (world[x][z][y] == BLOCK_STONE) {
-                    DrawModel(cubeModel, position, 1.0f, GRAY);
-                    DrawCubeWiresV(position, size,
-                                   DARKGRAY);  // Draw wireframe for better visibility
+                    DrawCubeV(position, size, GRAY);
+                    DrawCubeWiresV(position, size, DARKGRAY);
                 }
             }
         }
@@ -61,12 +59,10 @@ void Game::draw() const {
     EndDrawing();
 }
 
-void Game::init() {
+void Game::init(int a) {
     DisableCursor();
 
     const float noiseScale = 0.01f;  // controls noise “zoom”
-
-    std::array<std::array<float, mapDepth>, mapWidth> heightMap{};
 
     for (int x = 0; x < mapWidth; x++) {
         for (int z = 0; z < mapDepth; z++) {

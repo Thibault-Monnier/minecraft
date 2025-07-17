@@ -6,7 +6,11 @@ set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 
-set(CMAKE_BUILD_TYPE Debug)
+# Default to Debug build if not specified
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+    message(STATUS "No build type specified, defaulting to Debug")
+endif ()
 
 include(FetchContent)
 
@@ -21,12 +25,22 @@ add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 target_compile_options(${PROJECT_NAME} PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow
-        -fsanitize=address,undefined -g -fno-omit-frame-pointer
 )
 
-target_link_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address,undefined
-)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(${PROJECT_NAME} PRIVATE
+            -fsanitize=address,undefined
+            -g
+            -fno-omit-frame-pointer
+    )
+    target_link_options(${PROJECT_NAME} PRIVATE
+            -fsanitize=address,undefined
+    )
+
+else ()
+    target_compile_options(${PROJECT_NAME} PRIVATE -O3)
+
+endif ()
 
 # === raylib setup ===
 FetchContent_Declare(
@@ -35,6 +49,10 @@ FetchContent_Declare(
         GIT_TAG master
 )
 FetchContent_MakeAvailable(raylib)
+
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+        ${raylib_SOURCE_DIR}/src
+)
 
 # === stb_perlin setup ===
 add_library(stb_perlin STATIC
