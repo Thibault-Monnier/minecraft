@@ -1,3 +1,5 @@
+#include <array>
+
 #include "raylib.h"
 #include "raymath.h"
 
@@ -39,15 +41,31 @@ void drawCursor() {
     DrawCircleLinesV(center, 1.0f, BLACK);  // Draw a dot in the center
 }
 
-void drawGame(const Camera& camera) {
+enum BlockType { BLOCK_AIR, BLOCK_DIRT, BLOCK_STONE };
+
+void drawGame(const Camera& camera,
+              const std::array<std::array<std::array<BlockType, 1>, 16>, 16>& world) {
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
     BeginMode3D(camera);
 
-    Vector3 cubePosition = {0.5f, 0.5f, 0.5f};
-    DrawCube(cubePosition, 1.0f, 1.0f, 1.0f, BROWN);
-    DrawCubeWires(cubePosition, 1.0f, 1.0f, 1.0f, DARKGRAY);
+    for (int x = 0; x < 16; ++x) {
+        for (int z = 0; z < 16; ++z) {
+            const Vector3 position = {static_cast<float>(x) + 0.5f, 0.5f,
+                                      static_cast<float>(z) + 0.5f};
+            const Vector3 size = {1.0f, 1.0f, 1.0f};
+
+            if (world[x][z][0] == BLOCK_DIRT) {
+                DrawCubeV(position, size, BROWN);
+                DrawCubeWiresV(position, size, DARKBROWN);  // Draw wireframe for better visibility
+            } else if (world[x][z][0] == BLOCK_STONE) {
+                DrawCubeV(position, size, GRAY);
+                DrawCubeWiresV(position, size, DARKGRAY);  // Draw wireframe for better visibility
+            }
+        }
+    }
+
     DrawGrid(1000, 1.0f);  // Draw a grid for reference
 
     EndMode3D();
@@ -58,20 +76,38 @@ void drawGame(const Camera& camera) {
 }
 
 void runGame() {
+    std::array<std::array<std::array<BlockType, 1>, 16>, 16> world = {};
+    // Initialize the world
+    for (int x = 0; x < 16; ++x) {
+        for (int y = 0; y < 16; ++y) {
+            if (x % 2 == 0)
+                world[x][y][0] = BLOCK_DIRT;
+            else
+                world[x][y][0] = BLOCK_STONE;
+        }
+    }
+    world[8][8][0] = BLOCK_AIR;
+    world[7][7][0] = BLOCK_AIR;
+    world[8][7][0] = BLOCK_AIR;
+    world[7][8][0] = BLOCK_AIR;
+
     DisableCursor();
 
     Camera camera;
     camera.position = {-4.0f, 4.0f, 0.0f};
     camera.target = {0.0f, 0.0f, 0.0f};
     camera.up = {0.0f, 1.0f, 0.0f};
-    camera.fovy = 45.0f;
+    camera.fovy = 80.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    const float cameraMovementSpeed = 2.0f;   // Speed of camera movement
-    const float cameraSensitivity = 0.0025f;  // Sensitivity for mouse movement
+    const float cameraMovementSpeedSlow = 3.0f;  // Speed of camera movement without SHIFT
+    const float cameraMovementSpeedFast = 6.0f;  // Speed of camera movement when holding SHIFT
+    const float cameraSensitivity = 0.0025f;     // Sensitivity for mouse movement
 
     float cameraYaw = 0.0f;    // Yaw angle for camera rotation
     float cameraPitch = 0.0f;  // Pitch angle for camera rotation
+
+    float cameraCurrentMovementSpeed = cameraMovementSpeedSlow;  // Current speed of the camera
 
     while (!WindowShouldClose()) {
         // Calculate camera rotation
@@ -102,11 +138,17 @@ void runGame() {
 
         if (IsKeyDown(KEY_SPACE))
             moveUp = 1.0f;
-        else if (IsKeyDown(KEY_LEFT_SHIFT))
+        else if (IsKeyDown(KEY_LEFT_CONTROL))
             moveUp = -1.0f;
 
+        if (IsKeyPressed(KEY_LEFT_SHIFT)) {
+            cameraCurrentMovementSpeed = (cameraCurrentMovementSpeed == cameraMovementSpeedSlow)
+                                             ? cameraMovementSpeedFast
+                                             : cameraMovementSpeedSlow;
+        }
+
         const float deltaTime = GetFrameTime();
-        const float speedFactor = deltaTime * cameraMovementSpeed;
+        const float speedFactor = deltaTime * cameraCurrentMovementSpeed;
 
         Vector2 forward2D = {cosf(cameraYaw), sinf(cameraYaw)};
         Vector2 right2D = {forward2D.y, -forward2D.x};
@@ -123,7 +165,7 @@ void runGame() {
         camera.target = Vector3Add(camera.position, direction);
 
         // Render
-        drawGame(camera);
+        drawGame(camera, world);
     }
 }
 
