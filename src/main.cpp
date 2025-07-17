@@ -2,12 +2,28 @@
 #include "raymath.h"
 
 void runMenu() {
+    const int halfScreenWidth = GetScreenWidth() / 2;
+    const int halfScreenHeight = GetScreenHeight() / 2;
+
+    const char* title = "Welcome to the Minecraft Clone!";
+    const char* subtitle = "Press ENTER to launch the game";
+
+    const int titleFontSize = 60;
+    const int subtitleFontSize = 30;
+
+    const int titleHalfWidth = MeasureText(title, titleFontSize) / 2;
+    const int titleHeight = titleFontSize;
+    const int subtitleHalfWidth = MeasureText(subtitle, subtitleFontSize) / 2;
+    const int subtitleHeight = subtitleFontSize;
+
     while (!(WindowShouldClose() || IsKeyPressed(KEY_ENTER))) {
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        DrawText("Welcome to the Minecraft Clone!", 190, 200, 30, ORANGE);
-        DrawText("Press ENTER to launch the game", 220, 250, 20, DARKGRAY);
+        DrawText(title, halfScreenWidth - titleHalfWidth, halfScreenHeight - titleHeight,
+                 titleFontSize, ORANGE);
+        DrawText(subtitle, halfScreenWidth - subtitleHalfWidth, halfScreenHeight + subtitleHeight,
+                 subtitleFontSize, DARKGRAY);
 
         EndDrawing();
     }
@@ -95,8 +111,10 @@ void runGame() {
         Vector2 forward2D = {cosf(cameraYaw), sinf(cameraYaw)};
         Vector2 right2D = {forward2D.y, -forward2D.x};
 
-        camera.position.x += (forward2D.x * movement2DRelative.x + right2D.x * movement2DRelative.y) * speedFactor;
-        camera.position.z += (forward2D.y * movement2DRelative.x + right2D.y * movement2DRelative.y) * speedFactor;
+        camera.position.x +=
+            (forward2D.x * movement2DRelative.x + right2D.x * movement2DRelative.y) * speedFactor;
+        camera.position.z +=
+            (forward2D.y * movement2DRelative.x + right2D.y * movement2DRelative.y) * speedFactor;
 
         camera.position.y += moveUp * speedFactor;
 
