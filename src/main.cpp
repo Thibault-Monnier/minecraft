@@ -100,8 +100,9 @@ void runGame() {
     camera.fovy = 80.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    const float cameraMovementSpeedSlow = 3.0f;  // Speed of camera movement without SHIFT
-    const float cameraMovementSpeedFast = 6.0f;  // Speed of camera movement when holding SHIFT
+    const float cameraMovementSpeedSlow = 4.3f;  // Speed of camera movement without SHIFT
+    const float cameraMovementSpeedFast = 9.5f;  // Speed of camera movement when holding SHIFT
+    const float cameraMovementSpeedVerticalMultiplier = 1.5f;  // Vertical movement speed multiplier
     const float cameraSensitivity = 0.0025f;     // Sensitivity for mouse movement
 
     float cameraYaw = 0.0f;    // Yaw angle for camera rotation
@@ -158,7 +159,7 @@ void runGame() {
         camera.position.z +=
             (forward2D.y * movement2DRelative.x + right2D.y * movement2DRelative.y) * speedFactor;
 
-        camera.position.y += moveUp * speedFactor;
+        camera.position.y += moveUp * speedFactor * cameraMovementSpeedVerticalMultiplier;
 
         // Update camera target
         // This is done after updating the position to prevent clipping when it moves
