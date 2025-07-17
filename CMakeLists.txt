@@ -36,7 +36,17 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(raylib)
 
+# === stb_perlin setup ===
+add_library(stb_perlin STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb/stb_perlin_wrapper.cpp
+)
+target_compile_definitions(stb_perlin PRIVATE STB_PERLIN_IMPLEMENTATION)
+target_include_directories(stb_perlin PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
+)
+
 target_link_libraries(${PROJECT_NAME}
         PRIVATE raylib
+        PRIVATE stb_perlin
         PRIVATE m pthread dl
 )

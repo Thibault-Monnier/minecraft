@@ -1,18 +1,27 @@
 #include "game.hpp"
 
 #include <array>
+#include <cstdio>
 
+#include "GL/gl.h"
 #include "raylib.h"
 #include "raymath.h"
+#include "stb_perlin.h"
 
 void Game::drawCursor() const {
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
-    Vector2 center = {static_cast<float>(screenWidth) / 2.0f,
-                      static_cast<float>(screenHeight) / 2.0f};
+    const int screenWidth = GetScreenWidth();
+    const int screenHeight = GetScreenHeight();
+    const Vector2 center = {static_cast<float>(screenWidth) / 2.0f,
+                            static_cast<float>(screenHeight) / 2.0f};
 
     DrawCircleLinesV(center, 7.0f, BLACK);  // Draw a circle around the cursor
     DrawCircleLinesV(center, 1.0f, BLACK);  // Draw a dot in the center
+}
+
+void Game::drawFps() const {
+    const int screenWidth = GetScreenWidth();
+    const int screenHeight = GetScreenHeight();
+    DrawText(TextFormat("FPS: %i", GetFPS()), screenWidth - 100, screenHeight - 30, 20, BLACK);
 }
 
 void Game::draw() const {
@@ -21,18 +30,23 @@ void Game::draw() const {
 
     BeginMode3D(camera);
 
-    for (int x = 0; x < 16; ++x) {
-        for (int z = 0; z < 16; ++z) {
-            const Vector3 position = {static_cast<float>(x) + 0.5f, 0.5f,
-                                      static_cast<float>(z) + 0.5f};
-            const Vector3 size = {1.0f, 1.0f, 1.0f};
+    for (int x = 0; x < mapWidth; ++x) {
+        for (int z = 0; z < mapDepth; ++z) {
+            for (int y = 0; y < mapHeight; ++y) {
+                const Vector3 position = {static_cast<float>(x) + 0.5f,
+                                          static_cast<float>(y) + 0.5f,
+                                          static_cast<float>(z) + 0.5f};
+                const Vector3 size = {1.0f, 1.0f, 1.0f};
 
-            if (world[x][z][0] == BLOCK_DIRT) {
-                DrawCubeV(position, size, BROWN);
-                DrawCubeWiresV(position, size, DARKBROWN);  // Draw wireframe for better visibility
-            } else if (world[x][z][0] == BLOCK_STONE) {
-                DrawCubeV(position, size, GRAY);
-                DrawCubeWiresV(position, size, DARKGRAY);  // Draw wireframe for better visibility
+                if (world[x][z][y] == BLOCK_DIRT) {
+                    DrawModel(cubeModel, position, 1.0f, BROWN);
+                    DrawCubeWiresV(position, size,
+                                   DARKBROWN);  // Draw wireframe for better visibility
+                } else if (world[x][z][y] == BLOCK_STONE) {
+                    DrawModel(cubeModel, position, 1.0f, GRAY);
+                    DrawCubeWiresV(position, size,
+                                   DARKGRAY);  // Draw wireframe for better visibility
+                }
             }
         }
     }
@@ -42,26 +56,39 @@ void Game::draw() const {
     EndMode3D();
 
     drawCursor();
+    drawFps();  // Draw FPS counter
 
     EndDrawing();
 }
 
 void Game::init() {
-    // Initialize the world
-    for (int x = 0; x < 16; ++x) {
-        for (int y = 0; y < 16; ++y) {
-            if (x % 2 == 0)
-                world[x][y][0] = BLOCK_DIRT;
-            else
-                world[x][y][0] = BLOCK_STONE;
+    DisableCursor();
+
+    const float noiseScale = 0.01f;  // controls noise “zoom”
+
+    std::array<std::array<float, mapDepth>, mapWidth> heightMap{};
+
+    for (int x = 0; x < mapWidth; x++) {
+        for (int z = 0; z < mapDepth; z++) {
+            float height =
+                stb_perlin_noise3_seed(static_cast<float>(x) * noiseScale,
+                                       static_cast<float>(z) * noiseScale, 0.0f, 0, 0, 0, seed);
+            height = (height + 1.0f) / 2.0f;     // Normalize to (0, 1)
+            height = height * mapHeight;         // Scale height
+            int realHeight = std::ceil(height);  // Round down to next integer in (0, mapHeight]
+
+            for (int y = 0; y < 10; ++y) {
+                if (y < realHeight) {
+                    if (y < 3)
+                        world[x][z][y] = BLOCK_STONE;  // Stone for lower layers
+                    else
+                        world[x][z][y] = BLOCK_DIRT;  // Dirt for upper layers
+                } else {
+                    world[x][z][y] = BLOCK_AIR;  // Air above the terrain
+                }
+            }
         }
     }
-    world[8][8][0] = BLOCK_AIR;
-    world[7][7][0] = BLOCK_AIR;
-    world[8][7][0] = BLOCK_AIR;
-    world[7][8][0] = BLOCK_AIR;
-
-    DisableCursor();
 }
 
 void Game::run() {

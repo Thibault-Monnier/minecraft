@@ -6,8 +6,6 @@
 
 enum BlockType { BLOCK_AIR, BLOCK_DIRT, BLOCK_STONE };
 
-typedef std::array<std::array<std::array<BlockType, 1>, 16>, 16> World;
-
 class Game {
    public:
     Game() {
@@ -18,13 +16,29 @@ class Game {
         camera.projection = CAMERA_PERSPECTIVE;
     }
 
+    ~Game() {
+        // unload GPU buffers and CPU-side mesh data:
+        UnloadModel(cubeModel);
+    }
+
     void init();
     void run();
 
    private:
-    Camera camera;
-    World world = {};
+    constexpr static int mapWidth = 128;
+    constexpr static int mapDepth = 128;
+    constexpr static int mapHeight = 16;
+
+    constexpr static int seed = 1;  // Seed for noise generation
+
+    typedef std::array<std::array<std::array<BlockType, mapHeight>, mapDepth>, mapWidth> World;
+
+    Camera camera{};
+    World world{};
+
+    const Model cubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
 
     void draw() const;
     void drawCursor() const;
+    void drawFps() const;
 };
