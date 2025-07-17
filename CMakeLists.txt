@@ -31,7 +31,8 @@ target_link_options(${PROJECT_NAME} PRIVATE
 # === raylib setup ===
 FetchContent_Declare(
         raylib
-        SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/raylib"
+        GIT_REPOSITORY https://github.com/raysan5/raylib.git
+        GIT_TAG master
 )
 FetchContent_MakeAvailable(raylib)
 

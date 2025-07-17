@@ -1,9 +1,6 @@
 # Build directories
 build/
 
-# Libraries
-third_party/
-
 # Compiled object files
 *.o
 *.obj
