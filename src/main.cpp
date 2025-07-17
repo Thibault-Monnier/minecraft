@@ -69,19 +69,20 @@ void runGame() {
                              sinf(cameraYaw) * cosf(cameraPitch)};
 
         // Update camera position
-        float moveForward = 0.0f;
-        float moveSide = 0.0f;
+        Vector2 movement2DRelative = {0.0f, 0.0f};
         float moveUp = 0.0f;
 
         if (IsKeyDown(KEY_W))
-            moveForward = 1.0f;
+            movement2DRelative.x = 1.0f;
         else if (IsKeyDown(KEY_S))
-            moveForward = -1.0f;
+            movement2DRelative.x = -1.0f;
 
         if (IsKeyDown(KEY_A))
-            moveSide = 1.0f;
+            movement2DRelative.y = 1.0f;
         else if (IsKeyDown(KEY_D))
-            moveSide = -1.0f;
+            movement2DRelative.y = -1.0f;
+
+        movement2DRelative = Vector2Normalize(movement2DRelative);
 
         if (IsKeyDown(KEY_SPACE))
             moveUp = 1.0f;
@@ -94,8 +95,8 @@ void runGame() {
         Vector2 forward2D = {cosf(cameraYaw), sinf(cameraYaw)};
         Vector2 right2D = {forward2D.y, -forward2D.x};
 
-        camera.position.x += (forward2D.x * moveForward + right2D.x * moveSide) * speedFactor;
-        camera.position.z += (forward2D.y * moveForward + right2D.y * moveSide) * speedFactor;
+        camera.position.x += (forward2D.x * movement2DRelative.x + right2D.x * movement2DRelative.y) * speedFactor;
+        camera.position.z += (forward2D.y * movement2DRelative.x + right2D.y * movement2DRelative.y) * speedFactor;
 
         camera.position.y += moveUp * speedFactor;
 
