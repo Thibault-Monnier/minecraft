@@ -2,8 +2,9 @@
 
 #include <array>
 #include <cstdio>
+#include <format>
+#include <vector>
 
-#include "GL/gl.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "stb_perlin.h"
@@ -25,42 +26,63 @@ void Game::drawFps() const {
 }
 
 void Game::draw() const {
+    std::vector<Matrix> dirtTransforms;
+    std::vector<Matrix> stoneTransforms;
+
+    for (int x = 0; x < mapWidth; ++x) {
+        for (int z = 0; z < mapDepth; ++z) {
+            for (int y = 0; y < mapHeight; ++y) {
+                const Vector3 pos = {static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
+                                     static_cast<float>(z) + 0.5f};
+                Matrix model = MatrixTranslate(pos.x, pos.y, pos.z);
+                if (world[x][z][y] == BLOCK_DIRT) {
+                    dirtTransforms.push_back(model);
+                } else if (world[x][z][y] == BLOCK_STONE) {
+                    stoneTransforms.push_back(model);
+                }
+            }
+        }
+    }
+
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
     BeginMode3D(camera);
 
-    for (int x = 0; x < mapWidth; ++x) {
-        for (int z = 0; z < mapDepth; ++z) {
-            for (int y = 0; y < mapHeight; ++y) {
-                const Vector3 position = {static_cast<float>(x) + 0.5f,
-                                          static_cast<float>(y) + 0.5f,
-                                          static_cast<float>(z) + 0.5f};
-                const Vector3 size = {1.0f, 1.0f, 1.0f};
+    if (!dirtTransforms.empty())
+        DrawMeshInstanced(cubeMesh, materialDirt, dirtTransforms.data(),
+                          static_cast<int>(dirtTransforms.size()));
 
-                if (world[x][z][y] == BLOCK_DIRT) {
-                    DrawCubeV(position, size, BROWN);
-                    DrawCubeWiresV(position, size, DARKBROWN);
-                } else if (world[x][z][y] == BLOCK_STONE) {
-                    DrawCubeV(position, size, GRAY);
-                    DrawCubeWiresV(position, size, DARKGRAY);
-                }
-            }
-        }
-    }
+    if (!stoneTransforms.empty())
+        DrawMeshInstanced(cubeMesh, materialStone, stoneTransforms.data(),
+                          static_cast<int>(stoneTransforms.size()));
 
     DrawGrid(1000, 1.0f);  // Draw a grid for reference
 
     EndMode3D();
 
     drawCursor();
-    drawFps();  // Draw FPS counter
+    drawFps();
 
     EndDrawing();
 }
 
-void Game::init(int a) {
+void Game::init() {
     DisableCursor();
+
+    Shader instancedShader = LoadShader(
+        std::format("{}/resources/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(), nullptr);
+
+    cubeMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
+    UploadMesh(&cubeMesh, false);
+
+    materialDirt = LoadMaterialDefault();
+    materialDirt.maps[MATERIAL_MAP_DIFFUSE].color = BROWN;
+    materialDirt.shader = instancedShader;
+
+    materialStone = LoadMaterialDefault();
+    materialStone.maps[MATERIAL_MAP_DIFFUSE].color = GRAY;
+    materialStone.shader = instancedShader;
 
     const float noiseScale = 0.01f;  // controls noise “zoom”
 

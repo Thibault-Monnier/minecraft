@@ -16,18 +16,13 @@ class Game {
         camera.projection = CAMERA_PERSPECTIVE;
     }
 
-    ~Game() {
-        // unload GPU buffers and CPU-side mesh data:
-        UnloadModel(cubeModel);
-    }
-
     void init();
     void run();
 
    private:
-    constexpr static int mapWidth = 128;
-    constexpr static int mapDepth = 128;
-    constexpr static int mapHeight = 16;
+    constexpr static int mapWidth = 216;
+    constexpr static int mapDepth = 216;
+    constexpr static int mapHeight = 32;
 
     constexpr static int seed = 1;  // Seed for noise generation
 
@@ -36,7 +31,10 @@ class Game {
     Camera camera{};
     World world{};
 
-    const Model cubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+    Mesh cubeMesh{};
+
+    Material materialDirt{};
+    Material materialStone{};
 
     void draw() const;
     void drawCursor() const;

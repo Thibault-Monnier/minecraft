@@ -27,11 +27,16 @@ target_compile_options(${PROJECT_NAME} PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        CMAKE_ROOT_DIR="${CMAKE_SOURCE_DIR}"
+)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${PROJECT_NAME} PRIVATE
             -fsanitize=address,undefined
             -g
             -fno-omit-frame-pointer
+            -O0
     )
     target_link_options(${PROJECT_NAME} PRIVATE
             -fsanitize=address,undefined
