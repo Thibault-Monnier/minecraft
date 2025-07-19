@@ -138,7 +138,7 @@ void Game::init() {
 
 void Game::run() {
     const float cameraMovementSpeedSlow = 4.3f;  // Speed of camera movement without SHIFT
-    const float cameraMovementSpeedFast = 9.5f;  // Speed of camera movement when holding SHIFT
+    const float cameraMovementSpeedFast = 17.5f;  // Speed of camera movement when holding SHIFT
     const float cameraMovementSpeedVerticalMultiplier = 1.5f;  // Vertical movement speed multiplier
     const float cameraSensitivity = 0.0025f;                   // Sensitivity for mouse movement
 
