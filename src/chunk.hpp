@@ -23,7 +23,7 @@ class Chunk {
     void generate(int seed, int mapHeightChunks);
     void render() const;
 
-    static constexpr int CHUNK_SIZE = 16;
+    static constexpr int CHUNK_SIZE = 32;
 
    private:
     const int chunkX_;

@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <format>
-#include <iostream>
 #include <stdexcept>
 
 #include "game.hpp"
@@ -10,7 +9,7 @@
 #include "stb_perlin.h"
 
 void Chunk::generate(const int seed, const int mapHeightChunks) {
-    const float noiseScale = 0.01f;  // controls noise “zoom”
+    const float noiseScale = 0.005f;  // controls noise “zoom”
 
     const int mapHeight = mapHeightChunks * CHUNK_SIZE;
 
