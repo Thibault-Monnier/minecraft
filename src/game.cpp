@@ -10,6 +10,14 @@
 #include "raymath.h"
 #include "utilityStructures.hpp"
 
+void Game::drawSky() const {
+    const int screenWidth = GetScreenWidth();
+    const int screenHeight = GetScreenHeight();
+
+    DrawRectangleGradientV(0, 0, screenWidth, screenHeight, {135, 206, 235, 255},
+                           {65, 105, 225, 255});
+}
+
 void Game::drawCursor() const {
     const int screenWidth = GetScreenWidth();
     const int screenHeight = GetScreenHeight();
@@ -28,7 +36,7 @@ void Game::drawFps() const {
 
 void Game::drawPositionInfo(const Vector3& position) const {
     DrawRectangle(10, 10, 200, 80, Fade(BLACK, 0.35f));  // Semi-transparent background
-    DrawRectangleLines(10, 10, 200, 80, BLACK);         // Border around the rectangle
+    DrawRectangleLines(10, 10, 200, 80, BLACK);          // Border around the rectangle
     DrawText(TextFormat("X: %.2f\nY: %.2f\nZ: %.2f", position.x, position.y, position.z), 20, 20,
              20, BLACK);
 }
@@ -36,6 +44,8 @@ void Game::drawPositionInfo(const Vector3& position) const {
 void Game::draw() const {
     BeginDrawing();
     ClearBackground(RAYWHITE);
+
+    drawSky();
 
     BeginMode3D(camera_);
 

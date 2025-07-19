@@ -44,6 +44,7 @@ class Game {
     Material materialStone_{};
 
     void draw() const;
+    void drawSky() const;
     void drawCursor() const;
     void drawFps() const;
     void drawPositionInfo(const Vector3& position) const;
