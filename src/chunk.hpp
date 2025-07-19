@@ -20,7 +20,15 @@ class Chunk {
           materialDirt_(materialDirt),
           materialStone_(materialStone) {}
 
+    [[nodiscard]] int getX() const { return chunkX_; }
+    [[nodiscard]] int getY() const { return chunkY_; }
+    [[nodiscard]] int getZ() const { return chunkZ_; }
+
     void generate(int seed, int mapHeightChunks);
+    void generateTransforms(const Chunk* positiveXNeighbor, const Chunk* negativeXNeighbor,
+                            const Chunk* positiveYNeighbor, const Chunk* negativeYNeighbor,
+                            const Chunk* positiveZNeighbor, const Chunk* negativeZNeighbor);
+
     void render() const;
 
     static constexpr int CHUNK_SIZE = 32;

@@ -1,13 +1,14 @@
 #include "game.hpp"
 
-#include <array>
 #include <cstdio>
 #include <format>
 #include <iostream>
+#include <ranges>
 #include <vector>
 
 #include "raylib.h"
 #include "raymath.h"
+#include "utilityStructures.hpp"
 
 void Game::drawCursor() const {
     const int screenWidth = GetScreenWidth();
@@ -33,7 +34,7 @@ void Game::draw() const {
 
     const float startTime = GetTime();
 
-    for (const auto& chunk : world_) {
+    for (const auto& chunk : world_ | std::views::values) {
         chunk.render();
     }
 
@@ -85,12 +86,34 @@ void Game::init() {
     for (int x = 0; x < MAP_WIDTH_CHUNKS; x++) {
         for (int y = 0; y < MAP_HEIGHT_CHUNKS; y++) {
             for (int z = 0; z < MAP_DEPTH_CHUNKS; z++) {
-                world_.emplace_back(x, y, z, instancedShader_, cubeMesh_, materialGrass_,
-                                    materialDirt_, materialStone_);
-                world_.back().generate(SEED, MAP_HEIGHT_CHUNKS);
+                auto [it, _] = world_.emplace(Vector3Integer{x, y, z},
+                                              Chunk(x, y, z, instancedShader_, cubeMesh_,
+                                                    materialGrass_, materialDirt_, materialStone_));
+                it->second.generate(SEED, MAP_HEIGHT_CHUNKS);
             }
         }
     }
+
+    for (auto& chunk : world_ | std::views::values) {
+        const int x = chunk.getX();
+        const int y = chunk.getY();
+        const int z = chunk.getZ();
+
+        auto findNeighbor = [&](const int dx, const int dy, const int dz) -> const Chunk* {
+            const auto it = world_.find(Vector3Integer{x + dx, y + dy, z + dz});
+            return (it != world_.end()) ? &it->second : nullptr;
+        };
+
+        const Chunk* posX = findNeighbor(+1, 0, 0);
+        const Chunk* negX = findNeighbor(-1, 0, 0);
+        const Chunk* posY = findNeighbor(0, +1, 0);
+        const Chunk* negY = findNeighbor(0, -1, 0);
+        const Chunk* posZ = findNeighbor(0, 0, +1);
+        const Chunk* negZ = findNeighbor(0, 0, -1);
+
+        chunk.generateTransforms(posX, negX, posY, negY, posZ, negZ);
+    }
+
     std::cout << "Generated " << world_.size() << " chunks." << std::endl;
 }
 

@@ -7,6 +7,7 @@
 #include "game.hpp"
 #include "raymath.h"
 #include "stb_perlin.h"
+#include "utilityStructures.hpp"
 
 void Chunk::generate(const int seed, const int mapHeightChunks) {
     const float noiseScale = 0.005f;  // controls noise “zoom”
@@ -39,6 +40,28 @@ void Chunk::generate(const int seed, const int mapHeightChunks) {
             }
         }
     }
+}
+
+void Chunk::generateTransforms(const Chunk* positiveXNeighbor, const Chunk* negativeXNeighbor,
+                               const Chunk* positiveYNeighbor, const Chunk* negativeYNeighbor,
+                               const Chunk* positiveZNeighbor, const Chunk* negativeZNeighbor) {
+    auto dataWithSentinel = [this, &positiveXNeighbor, &negativeXNeighbor, &positiveYNeighbor,
+                             &negativeYNeighbor, &positiveZNeighbor, &negativeZNeighbor](
+                                const int x, const int y, const int z) -> BlockType {
+        if (x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
+            return data_[x][y][z];
+        }
+
+        if (x < 0 && negativeXNeighbor) return negativeXNeighbor->data_[CHUNK_SIZE - 1][y][z];
+        if (x >= CHUNK_SIZE && positiveXNeighbor) return positiveXNeighbor->data_[0][y][z];
+        if (y < 0 && negativeYNeighbor) return negativeYNeighbor->data_[x][CHUNK_SIZE - 1][z];
+        if (y >= CHUNK_SIZE && positiveYNeighbor) return positiveYNeighbor->data_[x][0][z];
+        if (z < 0 && negativeZNeighbor) return negativeZNeighbor->data_[x][y][CHUNK_SIZE - 1];
+        if (z >= CHUNK_SIZE && positiveZNeighbor) return positiveZNeighbor->data_[x][y][0];
+
+        // No chunk there
+        return BlockType::BLOCK_AIR;
+    };
 
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_SIZE; y++) {
@@ -47,22 +70,18 @@ void Chunk::generate(const int seed, const int mapHeightChunks) {
                     continue;  // Skip air blocks
                 }
 
-                constexpr std::array<Vector3, 6> neighbourCubesOffsets = {
-                    {Vector3{-1.0f, 0.0f, 0.0f}, Vector3{1.0f, 0.0f, 0.0f},
-                     Vector3{0.0f, -1.0f, 0.0f}, Vector3{0.0f, 1.0f, 0.0f},
-                     Vector3{0.0f, 0.0f, -1.0f}, Vector3{0.0f, 0.0f, 1.0f}}};
+                constexpr std::array<Vector3Integer, 6> neighborCubesOffsets = {
+                    {Vector3Integer{-1, 0, 0}, Vector3Integer{1, 0, 0}, Vector3Integer{0, -1, 0},
+                     Vector3Integer{0, 1, 0}, Vector3Integer{0, 0, -1}, Vector3Integer{0, 0, 1}}};
 
                 bool isVisibleBlock = false;
-                for (const Vector3& offset : neighbourCubesOffsets) {
-                    const int neighbourX = x + static_cast<int>(offset.x);
-                    const int neighbourY = y + static_cast<int>(offset.y);
-                    const int neighbourZ = z + static_cast<int>(offset.z);
+                for (const Vector3Integer& offset : neighborCubesOffsets) {
+                    const int neighborX = x + static_cast<int>(offset.x);
+                    const int neighborY = y + static_cast<int>(offset.y);
+                    const int neighborZ = z + static_cast<int>(offset.z);
 
-                    // If the neighbouring block is air or the block is on the edge of the chunk, we
-                    // need to render it
-                    if (neighbourX < 0 || neighbourX >= CHUNK_SIZE || neighbourY < 0 ||
-                        neighbourY >= CHUNK_SIZE || neighbourZ < 0 || neighbourZ >= CHUNK_SIZE ||
-                        data_[neighbourX][neighbourY][neighbourZ] == BlockType::BLOCK_AIR) {
+                    // If the neighboring block is air, we need to render it
+                    if (dataWithSentinel(neighborX, neighborY, neighborZ) == BlockType::BLOCK_AIR) {
                         isVisibleBlock = true;
                         break;
                     }

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <array>
-#include <vector>
+#include <unordered_map>
 
 #include "chunk.hpp"
 #include "raylib.h"
+#include "utilityStructures.hpp"
 
 class Game {
    public:
@@ -26,15 +26,16 @@ class Game {
     void init();
     void run();
 
-    constexpr static int MAP_WIDTH_CHUNKS = 18;
-    constexpr static int MAP_DEPTH_CHUNKS = 18;
+    constexpr static int MAP_WIDTH_CHUNKS = 16;
+    constexpr static int MAP_DEPTH_CHUNKS = 16;
     constexpr static int MAP_HEIGHT_CHUNKS = 3;
 
    private:
     constexpr static int SEED = 1;  // Seed for noise generation
 
     Camera camera_{};
-    std::vector<Chunk> world_{};
+
+    std::unordered_map<Vector3Integer, Chunk> world_{};
 
     Shader instancedShader_{};
     Mesh cubeMesh_{};
