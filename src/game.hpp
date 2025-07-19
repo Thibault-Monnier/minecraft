@@ -3,9 +3,8 @@
 #include <array>
 #include <vector>
 
+#include "chunk.hpp"
 #include "raylib.h"
-
-enum class BlockType { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE };
 
 class Game {
    public:
@@ -27,28 +26,21 @@ class Game {
     void init();
     void run();
 
-    constexpr static int MAP_WIDTH = 216;
-    constexpr static int MAP_DEPTH = 216;
-    constexpr static int MAP_HEIGHT = 32;
-
-    Mesh cubeMesh_{};
-
-    Material materialGrass_{};
-    Material materialDirt_{};
-    Material materialStone_{};
-    Shader instancedShader_{};
+    constexpr static int MAP_WIDTH_CHUNKS = 16;
+    constexpr static int MAP_DEPTH_CHUNKS = 16;
+    constexpr static int MAP_HEIGHT_CHUNKS = 2;
 
    private:
     constexpr static int SEED = 1;  // Seed for noise generation
 
-    typedef std::array<std::array<std::array<BlockType, MAP_DEPTH>, MAP_HEIGHT>, MAP_WIDTH> World;
-
     Camera camera_{};
-    World world_{};
+    std::vector<Chunk> world_{};
 
-    std::vector<Matrix> grassTransforms;
-    std::vector<Matrix> dirtTransforms;
-    std::vector<Matrix> stoneTransforms;
+    Shader instancedShader_{};
+    Mesh cubeMesh_{};
+    Material materialGrass_{};
+    Material materialDirt_{};
+    Material materialStone_{};
 
     void draw() const;
     void drawCursor() const;

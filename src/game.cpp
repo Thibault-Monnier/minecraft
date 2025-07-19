@@ -3,11 +3,11 @@
 #include <array>
 #include <cstdio>
 #include <format>
+#include <iostream>
 #include <vector>
 
 #include "raylib.h"
 #include "raymath.h"
-#include "stb_perlin.h"
 
 void Game::drawCursor() const {
     const int screenWidth = GetScreenWidth();
@@ -33,17 +33,13 @@ void Game::draw() const {
 
     const float startTime = GetTime();
 
-    if (!grassTransforms.empty())
-        DrawMeshInstanced(cubeMesh_, materialGrass_, grassTransforms.data(),
-                          static_cast<int>(grassTransforms.size()));
-    if (!dirtTransforms.empty())
-        DrawMeshInstanced(cubeMesh_, materialDirt_, dirtTransforms.data(),
-                          static_cast<int>(dirtTransforms.size()));
-    if (!stoneTransforms.empty())
-        DrawMeshInstanced(cubeMesh_, materialStone_, stoneTransforms.data(),
-                          static_cast<int>(stoneTransforms.size()));
+    for (const auto& chunk : world_) {
+        chunk.render();
+    }
 
     const float endTime = GetTime();
+
+    DrawGrid(1e3, 1.0f);
 
     EndMode3D();
 
@@ -52,10 +48,7 @@ void Game::draw() const {
 
     EndDrawing();
 
-    std::printf(
-        "Rendered %d blocks in %.4f\n",
-        static_cast<int>(grassTransforms.size() + dirtTransforms.size() + stoneTransforms.size()),
-        endTime - startTime);
+    std::cout << "Chunks rendering time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl;
 }
 
 void Game::init() {
@@ -89,90 +82,16 @@ void Game::init() {
     materialStone_.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
     materialStone_.shader = instancedShader_;
 
-    const float noiseScale = 0.01f;  // controls noise “zoom”
-
-    for (int x = 0; x < MAP_WIDTH; x++) {
-        for (int z = 0; z < MAP_DEPTH; z++) {
-            float height =
-                stb_perlin_noise3_seed(static_cast<float>(x) * noiseScale,
-                                       static_cast<float>(z) * noiseScale, 0.0f, 0, 0, 0, SEED);
-            height = (height + 1.0f) / 2.0f;     // Normalize to (0, 1)
-            height = height * MAP_HEIGHT;        // Scale height
-            int realHeight = std::ceil(height);  // Round to next integer in (0, mapHeight]
-
-            for (int y = 0; y < MAP_HEIGHT; ++y) {
-                if (y < realHeight) {
-                    if (y < realHeight - 4)
-                        world_[x][y][z] = BlockType::BLOCK_STONE;  // Stone for lower layers
-                    else if (y < realHeight - 1)
-                        world_[x][y][z] = BlockType::BLOCK_DIRT;  // Grass for upper layers
-                    else
-                        world_[x][y][z] = BlockType::BLOCK_GRASS;  // Grass on top
-                } else {
-                    world_[x][y][z] = BlockType::BLOCK_AIR;  // Air above the terrain
-                }
+    for (int x = 0; x < MAP_WIDTH_CHUNKS; x++) {
+        for (int y = 0; y < MAP_HEIGHT_CHUNKS; y++) {
+            for (int z = 0; z < MAP_DEPTH_CHUNKS; z++) {
+                world_.emplace_back(x, y, z, instancedShader_, cubeMesh_, materialGrass_,
+                                    materialDirt_, materialStone_);
+                world_.back().generate(SEED, MAP_HEIGHT_CHUNKS);
             }
         }
     }
-
-    const float startTime = GetTime();
-
-    for (int x = 0; x < MAP_WIDTH; ++x) {
-        for (int z = 0; z < MAP_DEPTH; ++z) {
-            for (int y = 0; y < MAP_HEIGHT; ++y) {
-                if (world_[x][y][z] == BlockType::BLOCK_AIR) {
-                    continue;  // Skip air blocks
-                }
-
-                constexpr std::array<Vector3, 6> neighbourCubesOffsets = {
-                    {Vector3{-1.0f, 0.0f, 0.0f}, Vector3{1.0f, 0.0f, 0.0f},
-                     Vector3{0.0f, -1.0f, 0.0f}, Vector3{0.0f, 1.0f, 0.0f},
-                     Vector3{0.0f, 0.0f, -1.0f}, Vector3{0.0f, 0.0f, 1.0f}}};
-
-                bool hasNeighbourAir = false;
-                for (const Vector3& offset : neighbourCubesOffsets) {
-                    const int neighbourX = x + static_cast<int>(offset.x);
-                    const int neighbourY = y + static_cast<int>(offset.y);
-                    const int neighbourZ = z + static_cast<int>(offset.z);
-
-                    // If the neighbouring block is air, we need to render this block
-                    if (neighbourX < 0 || neighbourX >= MAP_WIDTH || neighbourY < 0 ||
-                        neighbourY >= MAP_HEIGHT || neighbourZ < 0 || neighbourZ >= MAP_DEPTH ||
-                        world_[neighbourX][neighbourY][neighbourZ] == BlockType::BLOCK_AIR) {
-                        hasNeighbourAir = true;
-                        break;
-                    }
-                }
-
-                if (!hasNeighbourAir) {
-                    continue;  // Skip rendering this block if no air neighbour
-                }
-
-                const Vector3 pos = {static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
-                                     static_cast<float>(z) + 0.5f};
-
-                Matrix model = MatrixTranslate(pos.x, pos.y, pos.z);
-
-                if (world_[x][y][z] == BlockType::BLOCK_GRASS) {
-                    grassTransforms.push_back(model);
-                } else if (world_[x][y][z] == BlockType::BLOCK_DIRT) {
-                    dirtTransforms.push_back(model);
-                } else if (world_[x][y][z] == BlockType::BLOCK_STONE) {
-                    stoneTransforms.push_back(model);
-                } else {
-                    throw std::runtime_error(
-                        std::format("Unknown block type at ({}, {}, {}): got {}", x, y, z,
-                                    static_cast<int>(world_[x][y][z])));
-                }
-            }
-        }
-    }
-
-    const float endTime = GetTime();
-    std::printf(
-        "Generated %d blocks in %.4f seconds\n",
-        static_cast<int>(grassTransforms.size() + dirtTransforms.size() + stoneTransforms.size()),
-        endTime - startTime);
+    std::cout << "Generated " << world_.size() << " chunks." << std::endl;
 }
 
 void Game::run() {
