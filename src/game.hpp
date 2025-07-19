@@ -27,13 +27,13 @@ class Game {
     void run();
 
    private:
-    constexpr static int mapWidth = 128;
-    constexpr static int mapDepth = 128;
+    constexpr static int mapWidth = 216;
+    constexpr static int mapDepth = 216;
     constexpr static int mapHeight = 32;
 
     constexpr static int seed = 1;  // Seed for noise generation
 
-    typedef std::array<std::array<std::array<BlockType, mapHeight>, mapDepth>, mapWidth> World;
+    typedef std::array<std::array<std::array<BlockType, mapDepth>, mapHeight>, mapWidth> World;
 
     Camera camera{};
     World world{};

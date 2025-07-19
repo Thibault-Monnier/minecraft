@@ -36,18 +36,18 @@ void Game::draw() const {
                 const Vector3 pos = {static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
                                      static_cast<float>(z) + 0.5f};
                 Matrix model = MatrixTranslate(pos.x, pos.y, pos.z);
-                if (world[x][z][y] == BlockType::BLOCK_GRASS) {
+                if (world[x][y][z] == BlockType::BLOCK_GRASS) {
                     grassTransforms.push_back(model);
-                } else if (world[x][z][y] == BlockType::BLOCK_DIRT) {
+                } else if (world[x][y][z] == BlockType::BLOCK_DIRT) {
                     dirtTransforms.push_back(model);
-                } else if (world[x][z][y] == BlockType::BLOCK_STONE) {
+                } else if (world[x][y][z] == BlockType::BLOCK_STONE) {
                     stoneTransforms.push_back(model);
-                } else if (world[x][z][y] == BlockType::BLOCK_AIR) {
+                } else if (world[x][y][z] == BlockType::BLOCK_AIR) {
                     // Do nothing for air blocks
                 } else {
                     throw std::runtime_error(
                         std::format("Unknown block type at ({}, {}, {}): got {}", x, y, z,
-                                    static_cast<int>(world[x][z][y])));
+                                    static_cast<int>(world[x][y][z])));
                 }
             }
         }
@@ -122,14 +122,14 @@ void Game::init() {
 
             for (int y = 0; y < mapHeight; ++y) {
                 if (y < realHeight) {
-                    if (y < 3)
-                        world[x][z][y] = BlockType::BLOCK_STONE;  // Stone for lower layers
+                    if (y < realHeight - 4)
+                        world[x][y][z] = BlockType::BLOCK_STONE;  // Stone for lower layers
                     else if (y < realHeight - 1)
-                        world[x][z][y] = BlockType::BLOCK_DIRT;  // Grass for upper layers
+                        world[x][y][z] = BlockType::BLOCK_DIRT;  // Grass for upper layers
                     else
-                        world[x][z][y] = BlockType::BLOCK_GRASS;  // Grass on top
+                        world[x][y][z] = BlockType::BLOCK_GRASS;  // Grass on top
                 } else {
-                    world[x][z][y] = BlockType::BLOCK_AIR;  // Air above the terrain
+                    world[x][y][z] = BlockType::BLOCK_AIR;  // Air above the terrain
                 }
             }
         }
@@ -137,7 +137,7 @@ void Game::init() {
 }
 
 void Game::run() {
-    const float cameraMovementSpeedSlow = 4.3f;  // Speed of camera movement without SHIFT
+    const float cameraMovementSpeedSlow = 4.3f;   // Speed of camera movement without SHIFT
     const float cameraMovementSpeedFast = 17.5f;  // Speed of camera movement when holding SHIFT
     const float cameraMovementSpeedVerticalMultiplier = 1.5f;  // Vertical movement speed multiplier
     const float cameraSensitivity = 0.0025f;                   // Sensitivity for mouse movement
