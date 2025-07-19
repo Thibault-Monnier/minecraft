@@ -9,18 +9,17 @@
 #include "stb_perlin.h"
 #include "utilityStructures.hpp"
 
-void Chunk::generate(const int seed, const int mapHeightChunks) {
+void Chunk::generate(const int seed, const int mapHeight) {
     const float noiseScale = 0.005f;  // controls noise “zoom”
-
-    const int mapHeight = mapHeightChunks * CHUNK_SIZE;
 
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int z = 0; z < CHUNK_SIZE; z++) {
             float height = stb_perlin_noise3_seed(
                 static_cast<float>(localToGlobalX(x)) * noiseScale,
                 static_cast<float>(localToGlobalZ(z)) * noiseScale, 0.0f, 0, 0, 0, seed);
-            height = (height + 1.0f) / 2.0f;                  // Normalize to (0, 1)
-            height = height * static_cast<float>(mapHeight);  // Scale height
+            height = (height + 1.0f) / 2.0f;                 // Normalize to (0, 1)
+            height += 2;                                     // Shift to (2, 3)
+            height = std::pow(8.0f, height);  // Exponentiate to (64, 512)
             int realHeight = std::ceil(height);  // Round to next integer in (0, mapHeight]
 
             for (int globalY = localToGlobalY(0); globalY < mapHeight; globalY++) {

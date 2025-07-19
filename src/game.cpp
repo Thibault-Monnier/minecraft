@@ -84,12 +84,12 @@ void Game::init() {
     materialStone_.shader = instancedShader_;
 
     for (int x = 0; x < MAP_WIDTH_CHUNKS; x++) {
-        for (int y = 0; y < MAP_HEIGHT_CHUNKS; y++) {
+        for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
             for (int z = 0; z < MAP_DEPTH_CHUNKS; z++) {
                 auto [it, _] = world_.emplace(Vector3Integer{x, y, z},
                                               Chunk(x, y, z, instancedShader_, cubeMesh_,
                                                     materialGrass_, materialDirt_, materialStone_));
-                it->second.generate(SEED, MAP_HEIGHT_CHUNKS);
+                it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
             }
         }
     }
