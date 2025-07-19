@@ -54,6 +54,7 @@ void Game::draw() const {
 
 void Game::init() {
     DisableCursor();
+    SetTargetFPS(0); // Set to maximum FPS
 
     instancedShader_ = LoadShader(
         std::format("{}/resources/shaders/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(),
@@ -62,21 +63,21 @@ void Game::init() {
     cubeMesh_ = GenMeshCube(1.0f, 1.0f, 1.0f);
     UploadMesh(&cubeMesh_, false);
 
-    Texture2D grassTexture =
+    const Texture2D grassTexture =
         LoadTexture(std::format("{}/resources/textures/grass.png", CMAKE_ROOT_DIR).c_str());
     materialGrass_ = LoadMaterialDefault();
     materialGrass_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     materialGrass_.maps[MATERIAL_MAP_DIFFUSE].texture = grassTexture;
     materialGrass_.shader = instancedShader_;
 
-    Texture2D dirtTexture =
+    const Texture2D dirtTexture =
         LoadTexture(std::format("{}/resources/textures/dirt.png", CMAKE_ROOT_DIR).c_str());
     materialDirt_ = LoadMaterialDefault();
     materialDirt_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     materialDirt_.maps[MATERIAL_MAP_DIFFUSE].texture = dirtTexture;  // Using the same texture
     materialDirt_.shader = instancedShader_;
 
-    Texture2D stoneTexture =
+    const Texture2D stoneTexture =
         LoadTexture(std::format("{}/resources/textures/stone.png", CMAKE_ROOT_DIR).c_str());
     materialStone_ = LoadMaterialDefault();
     materialStone_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
