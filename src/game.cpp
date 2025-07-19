@@ -26,46 +26,19 @@ void Game::drawFps() const {
 }
 
 void Game::draw() const {
-    std::vector<Matrix> grassTransforms;
-    std::vector<Matrix> dirtTransforms;
-    std::vector<Matrix> stoneTransforms;
-
-    for (int x = 0; x < mapWidth; ++x) {
-        for (int z = 0; z < mapDepth; ++z) {
-            for (int y = 0; y < mapHeight; ++y) {
-                const Vector3 pos = {static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
-                                     static_cast<float>(z) + 0.5f};
-                Matrix model = MatrixTranslate(pos.x, pos.y, pos.z);
-                if (world[x][y][z] == BlockType::BLOCK_GRASS) {
-                    grassTransforms.push_back(model);
-                } else if (world[x][y][z] == BlockType::BLOCK_DIRT) {
-                    dirtTransforms.push_back(model);
-                } else if (world[x][y][z] == BlockType::BLOCK_STONE) {
-                    stoneTransforms.push_back(model);
-                } else if (world[x][y][z] == BlockType::BLOCK_AIR) {
-                    // Do nothing for air blocks
-                } else {
-                    throw std::runtime_error(
-                        std::format("Unknown block type at ({}, {}, {}): got {}", x, y, z,
-                                    static_cast<int>(world[x][y][z])));
-                }
-            }
-        }
-    }
-
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
-    BeginMode3D(camera);
+    BeginMode3D(camera_);
 
     if (!grassTransforms.empty())
-        DrawMeshInstanced(cubeMesh, materialGrass, grassTransforms.data(),
+        DrawMeshInstanced(cubeMesh_, materialGrass_, grassTransforms.data(),
                           static_cast<int>(grassTransforms.size()));
     if (!dirtTransforms.empty())
-        DrawMeshInstanced(cubeMesh, materialDirt, dirtTransforms.data(),
+        DrawMeshInstanced(cubeMesh_, materialDirt_, dirtTransforms.data(),
                           static_cast<int>(dirtTransforms.size()));
     if (!stoneTransforms.empty())
-        DrawMeshInstanced(cubeMesh, materialStone, stoneTransforms.data(),
+        DrawMeshInstanced(cubeMesh_, materialStone_, stoneTransforms.data(),
                           static_cast<int>(stoneTransforms.size()));
 
     DrawGrid(1000, 1.0f);  // Draw a grid for reference
@@ -81,55 +54,78 @@ void Game::draw() const {
 void Game::init() {
     DisableCursor();
 
-    instancedShader = LoadShader(
+    instancedShader_ = LoadShader(
         std::format("{}/resources/shaders/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(),
         nullptr);
 
-    cubeMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
-    UploadMesh(&cubeMesh, false);
+    cubeMesh_ = GenMeshCube(1.0f, 1.0f, 1.0f);
+    UploadMesh(&cubeMesh_, false);
 
     Texture2D grassTexture =
         LoadTexture(std::format("{}/resources/textures/grass.png", CMAKE_ROOT_DIR).c_str());
-    materialGrass = LoadMaterialDefault();
-    materialGrass.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    materialGrass.maps[MATERIAL_MAP_DIFFUSE].texture = grassTexture;
-    materialGrass.shader = instancedShader;
+    materialGrass_ = LoadMaterialDefault();
+    materialGrass_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    materialGrass_.maps[MATERIAL_MAP_DIFFUSE].texture = grassTexture;
+    materialGrass_.shader = instancedShader_;
 
     Texture2D dirtTexture =
         LoadTexture(std::format("{}/resources/textures/dirt.png", CMAKE_ROOT_DIR).c_str());
-    materialDirt = LoadMaterialDefault();
-    materialDirt.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    materialDirt.maps[MATERIAL_MAP_DIFFUSE].texture = dirtTexture;  // Using the same texture
-    materialDirt.shader = instancedShader;
+    materialDirt_ = LoadMaterialDefault();
+    materialDirt_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    materialDirt_.maps[MATERIAL_MAP_DIFFUSE].texture = dirtTexture;  // Using the same texture
+    materialDirt_.shader = instancedShader_;
 
     Texture2D stoneTexture =
         LoadTexture(std::format("{}/resources/textures/stone.png", CMAKE_ROOT_DIR).c_str());
-    materialStone = LoadMaterialDefault();
-    materialStone.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    materialStone.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
-    materialStone.shader = instancedShader;
+    materialStone_ = LoadMaterialDefault();
+    materialStone_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    materialStone_.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
+    materialStone_.shader = instancedShader_;
 
     const float noiseScale = 0.01f;  // controls noise “zoom”
 
-    for (int x = 0; x < mapWidth; x++) {
-        for (int z = 0; z < mapDepth; z++) {
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int z = 0; z < MAP_DEPTH; z++) {
             float height =
                 stb_perlin_noise3_seed(static_cast<float>(x) * noiseScale,
-                                       static_cast<float>(z) * noiseScale, 0.0f, 0, 0, 0, seed);
+                                       static_cast<float>(z) * noiseScale, 0.0f, 0, 0, 0, SEED);
             height = (height + 1.0f) / 2.0f;     // Normalize to (0, 1)
-            height = height * mapHeight;         // Scale height
+            height = height * MAP_HEIGHT;        // Scale height
             int realHeight = std::ceil(height);  // Round to next integer in (0, mapHeight]
 
-            for (int y = 0; y < mapHeight; ++y) {
+            for (int y = 0; y < MAP_HEIGHT; ++y) {
                 if (y < realHeight) {
                     if (y < realHeight - 4)
-                        world[x][y][z] = BlockType::BLOCK_STONE;  // Stone for lower layers
+                        world_[x][y][z] = BlockType::BLOCK_STONE;  // Stone for lower layers
                     else if (y < realHeight - 1)
-                        world[x][y][z] = BlockType::BLOCK_DIRT;  // Grass for upper layers
+                        world_[x][y][z] = BlockType::BLOCK_DIRT;  // Grass for upper layers
                     else
-                        world[x][y][z] = BlockType::BLOCK_GRASS;  // Grass on top
+                        world_[x][y][z] = BlockType::BLOCK_GRASS;  // Grass on top
                 } else {
-                    world[x][y][z] = BlockType::BLOCK_AIR;  // Air above the terrain
+                    world_[x][y][z] = BlockType::BLOCK_AIR;  // Air above the terrain
+                }
+            }
+        }
+    }
+
+    for (int x = 0; x < MAP_WIDTH; ++x) {
+        for (int z = 0; z < MAP_DEPTH; ++z) {
+            for (int y = 0; y < MAP_HEIGHT; ++y) {
+                const Vector3 pos = {static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
+                                     static_cast<float>(z) + 0.5f};
+                Matrix model = MatrixTranslate(pos.x, pos.y, pos.z);
+                if (world_[x][y][z] == BlockType::BLOCK_GRASS) {
+                    grassTransforms.push_back(model);
+                } else if (world_[x][y][z] == BlockType::BLOCK_DIRT) {
+                    dirtTransforms.push_back(model);
+                } else if (world_[x][y][z] == BlockType::BLOCK_STONE) {
+                    stoneTransforms.push_back(model);
+                } else if (world_[x][y][z] == BlockType::BLOCK_AIR) {
+                    // Do nothing for air blocks
+                } else {
+                    throw std::runtime_error(
+                        std::format("Unknown block type at ({}, {}, {}): got {}", x, y, z,
+                                    static_cast<int>(world_[x][y][z])));
                 }
             }
         }
@@ -191,16 +187,16 @@ void Game::run() {
         Vector2 forward2D = {cosf(cameraYaw), sinf(cameraYaw)};
         Vector2 right2D = {forward2D.y, -forward2D.x};
 
-        camera.position.x +=
+        camera_.position.x +=
             (forward2D.x * movement2DRelative.x + right2D.x * movement2DRelative.y) * speedFactor;
-        camera.position.z +=
+        camera_.position.z +=
             (forward2D.y * movement2DRelative.x + right2D.y * movement2DRelative.y) * speedFactor;
 
-        camera.position.y += moveUp * speedFactor * cameraMovementSpeedVerticalMultiplier;
+        camera_.position.y += moveUp * speedFactor * cameraMovementSpeedVerticalMultiplier;
 
         // Update camera target
         // This is done after updating the position to prevent clipping when it moves
-        camera.target = Vector3Add(camera.position, direction);
+        camera_.target = Vector3Add(camera_.position, direction);
 
         // Render
         draw();
