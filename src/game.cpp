@@ -26,6 +26,7 @@ void Game::drawFps() const {
 }
 
 void Game::draw() const {
+    std::vector<Matrix> grassTransforms;
     std::vector<Matrix> dirtTransforms;
     std::vector<Matrix> stoneTransforms;
 
@@ -35,10 +36,18 @@ void Game::draw() const {
                 const Vector3 pos = {static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
                                      static_cast<float>(z) + 0.5f};
                 Matrix model = MatrixTranslate(pos.x, pos.y, pos.z);
-                if (world[x][z][y] == BLOCK_DIRT) {
+                if (world[x][z][y] == BlockType::BLOCK_GRASS) {
+                    grassTransforms.push_back(model);
+                } else if (world[x][z][y] == BlockType::BLOCK_DIRT) {
                     dirtTransforms.push_back(model);
-                } else if (world[x][z][y] == BLOCK_STONE) {
+                } else if (world[x][z][y] == BlockType::BLOCK_STONE) {
                     stoneTransforms.push_back(model);
+                } else if (world[x][z][y] == BlockType::BLOCK_AIR) {
+                    // Do nothing for air blocks
+                } else {
+                    throw std::runtime_error(
+                        std::format("Unknown block type at ({}, {}, {}): got {}", x, y, z,
+                                    static_cast<int>(world[x][z][y])));
                 }
             }
         }
@@ -49,10 +58,12 @@ void Game::draw() const {
 
     BeginMode3D(camera);
 
+    if (!grassTransforms.empty())
+        DrawMeshInstanced(cubeMesh, materialGrass, grassTransforms.data(),
+                          static_cast<int>(grassTransforms.size()));
     if (!dirtTransforms.empty())
         DrawMeshInstanced(cubeMesh, materialDirt, dirtTransforms.data(),
                           static_cast<int>(dirtTransforms.size()));
-
     if (!stoneTransforms.empty())
         DrawMeshInstanced(cubeMesh, materialStone, stoneTransforms.data(),
                           static_cast<int>(stoneTransforms.size()));
@@ -70,18 +81,32 @@ void Game::draw() const {
 void Game::init() {
     DisableCursor();
 
-    Shader instancedShader = LoadShader(
-        std::format("{}/resources/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(), nullptr);
+    instancedShader = LoadShader(
+        std::format("{}/resources/shaders/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(),
+        nullptr);
 
     cubeMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
     UploadMesh(&cubeMesh, false);
 
+    Texture2D grassTexture =
+        LoadTexture(std::format("{}/resources/textures/grass.png", CMAKE_ROOT_DIR).c_str());
+    materialGrass = LoadMaterialDefault();
+    materialGrass.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    materialGrass.maps[MATERIAL_MAP_DIFFUSE].texture = grassTexture;
+    materialGrass.shader = instancedShader;
+
+    Texture2D dirtTexture =
+        LoadTexture(std::format("{}/resources/textures/dirt.png", CMAKE_ROOT_DIR).c_str());
     materialDirt = LoadMaterialDefault();
-    materialDirt.maps[MATERIAL_MAP_DIFFUSE].color = BROWN;
+    materialDirt.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    materialDirt.maps[MATERIAL_MAP_DIFFUSE].texture = dirtTexture;  // Using the same texture
     materialDirt.shader = instancedShader;
 
+    Texture2D stoneTexture =
+        LoadTexture(std::format("{}/resources/textures/stone.png", CMAKE_ROOT_DIR).c_str());
     materialStone = LoadMaterialDefault();
-    materialStone.maps[MATERIAL_MAP_DIFFUSE].color = GRAY;
+    materialStone.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    materialStone.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
     materialStone.shader = instancedShader;
 
     const float noiseScale = 0.01f;  // controls noise “zoom”
@@ -93,16 +118,18 @@ void Game::init() {
                                        static_cast<float>(z) * noiseScale, 0.0f, 0, 0, 0, seed);
             height = (height + 1.0f) / 2.0f;     // Normalize to (0, 1)
             height = height * mapHeight;         // Scale height
-            int realHeight = std::ceil(height);  // Round down to next integer in (0, mapHeight]
+            int realHeight = std::ceil(height);  // Round to next integer in (0, mapHeight]
 
-            for (int y = 0; y < 10; ++y) {
+            for (int y = 0; y < mapHeight; ++y) {
                 if (y < realHeight) {
                     if (y < 3)
-                        world[x][z][y] = BLOCK_STONE;  // Stone for lower layers
+                        world[x][z][y] = BlockType::BLOCK_STONE;  // Stone for lower layers
+                    else if (y < realHeight - 1)
+                        world[x][z][y] = BlockType::BLOCK_DIRT;  // Grass for upper layers
                     else
-                        world[x][z][y] = BLOCK_DIRT;  // Dirt for upper layers
+                        world[x][z][y] = BlockType::BLOCK_GRASS;  // Grass on top
                 } else {
-                    world[x][z][y] = BLOCK_AIR;  // Air above the terrain
+                    world[x][z][y] = BlockType::BLOCK_AIR;  // Air above the terrain
                 }
             }
         }

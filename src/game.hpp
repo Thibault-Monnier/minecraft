@@ -4,7 +4,7 @@
 
 #include "raylib.h"
 
-enum BlockType { BLOCK_AIR, BLOCK_DIRT, BLOCK_STONE };
+enum class BlockType { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE };
 
 class Game {
    public:
@@ -16,12 +16,19 @@ class Game {
         camera.projection = CAMERA_PERSPECTIVE;
     }
 
+    ~Game() {
+        UnloadShader(instancedShader);
+        UnloadMesh(cubeMesh);
+        UnloadMaterial(materialGrass);
+        UnloadMaterial(materialStone);
+    }
+
     void init();
     void run();
 
    private:
-    constexpr static int mapWidth = 216;
-    constexpr static int mapDepth = 216;
+    constexpr static int mapWidth = 128;
+    constexpr static int mapDepth = 128;
     constexpr static int mapHeight = 32;
 
     constexpr static int seed = 1;  // Seed for noise generation
@@ -33,8 +40,10 @@ class Game {
 
     Mesh cubeMesh{};
 
+    Material materialGrass{};
     Material materialDirt{};
     Material materialStone{};
+    Shader instancedShader{};
 
     void draw() const;
     void drawCursor() const;
