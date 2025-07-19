@@ -9,18 +9,67 @@
 #include "stb_perlin.h"
 #include "utilityStructures.hpp"
 
-void Chunk::generate(const int seed, const int mapHeight) {
-    const float noiseScale = 0.005f;  // controls noise “zoom”
+float fBm(const float x, const float z, const int octaves, const float lacunarity, const float gain,
+          const int seed) {
+    float amplitude = 1.0f;
+    float frequency = 1.0f;
+    float sum = 0.0f;
+    for (int i = 0; i < octaves; i++) {
+        sum += amplitude *
+               stb_perlin_noise3_seed(x * frequency, z * frequency, 0.0f, 0, 0, 0, seed + i);
+        amplitude *= gain;
+        frequency *= lacunarity;
+    }
+    return sum;
+}
 
+float computeMaxAmplitude(const int octaves, const float gain) {
+    float a = 1.0f;
+    float maxAmp = 0.0f;
+    for (int i = 0; i < octaves; i++) {
+        maxAmp += a;
+        a *= gain;
+    }
+    return maxAmp;
+}
+
+int getHeight(const int x, const int z, const int seed) {
+    constexpr int octaves = 6;
+    constexpr float lacunarity = 2.0f;
+    constexpr float gain = 0.5f;
+    constexpr float noiseScale = 0.005f;  // tweak as needed
+
+    // raw fBM in [ -maxAmp, +maxAmp ]
+    const float raw = fBm(static_cast<float>(x) * noiseScale, static_cast<float>(z) * noiseScale,
+                          octaves, lacunarity, gain, seed);
+
+    // normalize to [-1,1]
+    const float maxAmp = computeMaxAmplitude(octaves, gain);
+    const float n = raw / maxAmp;
+
+    // normalize to [0,1]
+    float normalized = (n + 1.0f) * 0.5f;
+
+    //   Option A: linear map to [0, maxWorldHeight]
+    // const float maxWorldHeight = 200.0f;
+    // float h = normalized * maxWorldHeight;
+
+    //   Option B: exponential for spikier relief
+    // float h = std::pow(normalized, 1.5f) * maxWorldHeight;
+
+    //   Option C: mix linear + exponent
+    const float heightLinear = normalized * 80.0f;                          // [0, 80]
+    const float heightExponentiated = std::pow(normalized, 3.0f) * 120.0f;  // [0, 120]
+    const float height =
+        heightLinear * (1 - normalized) + heightExponentiated * normalized + 4;  // [4, 124]
+
+    return static_cast<int>(std::ceil(height));
+}
+
+void Chunk::generate(const int seed, const int mapHeight) {
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int z = 0; z < CHUNK_SIZE; z++) {
-            float height = stb_perlin_noise3_seed(
-                static_cast<float>(localToGlobalX(x)) * noiseScale,
-                static_cast<float>(localToGlobalZ(z)) * noiseScale, 0.0f, 0, 0, 0, seed);
-            height = (height + 1.0f) / 2.0f;                 // Normalize to (0, 1)
-            height += 2;                                     // Shift to (2, 3)
-            height = std::pow(8.0f, height);  // Exponentiate to (64, 512)
-            int realHeight = std::ceil(height);  // Round to next integer in (0, mapHeight]
+            const int realHeight = getHeight(localToGlobalX(x), localToGlobalZ(z), seed);
 
             for (int globalY = localToGlobalY(0); globalY < mapHeight; globalY++) {
                 const int localY = globalToLocalY(globalY);

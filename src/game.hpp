@@ -28,7 +28,7 @@ class Game {
 
     constexpr static int MAP_WIDTH_CHUNKS = 24;
     constexpr static int MAP_DEPTH_CHUNKS = 24;
-    constexpr static int MAP_HEIGHT_BLOCKS = 512;
+    constexpr static int MAP_HEIGHT_BLOCKS = 128;
 
    private:
     constexpr static int SEED = 1;  // Seed for noise generation
