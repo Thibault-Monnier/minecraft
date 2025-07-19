@@ -26,26 +26,30 @@ void Game::drawFps() const {
     DrawText(TextFormat("FPS: %i", GetFPS()), screenWidth - 100, screenHeight - 30, 20, BLACK);
 }
 
+void Game::drawPositionInfo(const Vector3& position) const {
+    DrawRectangle(10, 10, 200, 80, Fade(BLACK, 0.35f));  // Semi-transparent background
+    DrawRectangleLines(10, 10, 200, 80, BLACK);         // Border around the rectangle
+    DrawText(TextFormat("X: %.2f\nY: %.2f\nZ: %.2f", position.x, position.y, position.z), 20, 20,
+             20, BLACK);
+}
+
 void Game::draw() const {
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
     BeginMode3D(camera_);
 
-    const float startTime = GetTime();
-
+    const auto startTime = static_cast<float>(GetTime());
     for (const auto& chunk : world_ | std::views::values) {
         chunk.render();
     }
-
-    const float endTime = GetTime();
-
-    DrawGrid(1e3, 1.0f);
+    const auto endTime = static_cast<float>(GetTime());
 
     EndMode3D();
 
     drawCursor();
     drawFps();
+    drawPositionInfo(camera_.position);
 
     EndDrawing();
 
@@ -54,7 +58,7 @@ void Game::draw() const {
 
 void Game::init() {
     DisableCursor();
-    SetTargetFPS(0); // Set to maximum FPS
+    SetTargetFPS(0);  // Set to maximum FPS
 
     instancedShader_ = LoadShader(
         std::format("{}/resources/shaders/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(),

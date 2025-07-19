@@ -46,4 +46,5 @@ class Game {
     void draw() const;
     void drawCursor() const;
     void drawFps() const;
+    void drawPositionInfo(const Vector3& position) const;
 };
