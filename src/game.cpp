@@ -45,8 +45,6 @@ void Game::draw() const {
 
     const float endTime = GetTime();
 
-    DrawGrid(1000, 1.0f);  // Draw a grid for reference
-
     EndMode3D();
 
     drawCursor();
