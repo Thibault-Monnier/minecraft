@@ -31,6 +31,8 @@ void Game::draw() const {
 
     BeginMode3D(camera_);
 
+    const float startTime = GetTime();
+
     if (!grassTransforms.empty())
         DrawMeshInstanced(cubeMesh_, materialGrass_, grassTransforms.data(),
                           static_cast<int>(grassTransforms.size()));
@@ -41,6 +43,8 @@ void Game::draw() const {
         DrawMeshInstanced(cubeMesh_, materialStone_, stoneTransforms.data(),
                           static_cast<int>(stoneTransforms.size()));
 
+    const float endTime = GetTime();
+
     DrawGrid(1000, 1.0f);  // Draw a grid for reference
 
     EndMode3D();
@@ -49,6 +53,11 @@ void Game::draw() const {
     drawFps();
 
     EndDrawing();
+
+    std::printf(
+        "Rendered %d blocks in %.4f\n",
+        static_cast<int>(grassTransforms.size() + dirtTransforms.size() + stoneTransforms.size()),
+        endTime - startTime);
 }
 
 void Game::init() {
@@ -108,20 +117,50 @@ void Game::init() {
         }
     }
 
+    const float startTime = GetTime();
+
     for (int x = 0; x < MAP_WIDTH; ++x) {
         for (int z = 0; z < MAP_DEPTH; ++z) {
             for (int y = 0; y < MAP_HEIGHT; ++y) {
+                if (world_[x][y][z] == BlockType::BLOCK_AIR) {
+                    continue;  // Skip air blocks
+                }
+
+                constexpr std::array<Vector3, 6> neighbourCubesOffsets = {
+                    {Vector3{-1.0f, 0.0f, 0.0f}, Vector3{1.0f, 0.0f, 0.0f},
+                     Vector3{0.0f, -1.0f, 0.0f}, Vector3{0.0f, 1.0f, 0.0f},
+                     Vector3{0.0f, 0.0f, -1.0f}, Vector3{0.0f, 0.0f, 1.0f}}};
+
+                bool hasNeighbourAir = false;
+                for (const Vector3& offset : neighbourCubesOffsets) {
+                    const int neighbourX = x + static_cast<int>(offset.x);
+                    const int neighbourY = y + static_cast<int>(offset.y);
+                    const int neighbourZ = z + static_cast<int>(offset.z);
+
+                    // If the neighbouring block is air, we need to render this block
+                    if (neighbourX < 0 || neighbourX >= MAP_WIDTH || neighbourY < 0 ||
+                        neighbourY >= MAP_HEIGHT || neighbourZ < 0 || neighbourZ >= MAP_DEPTH ||
+                        world_[neighbourX][neighbourY][neighbourZ] == BlockType::BLOCK_AIR) {
+                        hasNeighbourAir = true;
+                        break;
+                    }
+                }
+
+                if (!hasNeighbourAir) {
+                    continue;  // Skip rendering this block if no air neighbour
+                }
+
                 const Vector3 pos = {static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
                                      static_cast<float>(z) + 0.5f};
+
                 Matrix model = MatrixTranslate(pos.x, pos.y, pos.z);
+
                 if (world_[x][y][z] == BlockType::BLOCK_GRASS) {
                     grassTransforms.push_back(model);
                 } else if (world_[x][y][z] == BlockType::BLOCK_DIRT) {
                     dirtTransforms.push_back(model);
                 } else if (world_[x][y][z] == BlockType::BLOCK_STONE) {
                     stoneTransforms.push_back(model);
-                } else if (world_[x][y][z] == BlockType::BLOCK_AIR) {
-                    // Do nothing for air blocks
                 } else {
                     throw std::runtime_error(
                         std::format("Unknown block type at ({}, {}, {}): got {}", x, y, z,
@@ -130,6 +169,12 @@ void Game::init() {
             }
         }
     }
+
+    const float endTime = GetTime();
+    std::printf(
+        "Generated %d blocks in %.4f seconds\n",
+        static_cast<int>(grassTransforms.size() + dirtTransforms.size() + stoneTransforms.size()),
+        endTime - startTime);
 }
 
 void Game::run() {

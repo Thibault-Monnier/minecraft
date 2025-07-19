@@ -6,7 +6,7 @@ int main() {
     InitWindow(0, 0, "Minecraft Clone");
     ToggleFullscreen();
 
-    SetTargetFPS(60);  // Set the game to run at 60 frames per second
+    SetTargetFPS(1e4);
 
     runMenu();
 
