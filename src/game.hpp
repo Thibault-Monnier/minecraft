@@ -17,7 +17,7 @@ class Game {
     }
 
     ~Game() {
-        UnloadShader(instancedShader_);
+        UnloadShader(terrainShader_);
         UnloadMesh(cubeMesh_);
         UnloadMaterial(materialGrass_);
         UnloadMaterial(materialStone_);
@@ -26,7 +26,7 @@ class Game {
     void init();
     void run();
 
-    constexpr static int RENDER_DISTANCE = 10;  // Render distance in chunks
+    constexpr static int RENDER_DISTANCE = 20;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 256;
 
    private:
@@ -36,7 +36,7 @@ class Game {
 
     std::unordered_map<Vector3Int, Chunk> world_{};
 
-    Shader instancedShader_{};
+    Shader terrainShader_{};
     Mesh cubeMesh_{};
     Material materialGrass_{};
     Material materialDirt_{};

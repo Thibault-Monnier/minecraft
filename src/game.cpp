@@ -6,8 +6,10 @@
 #include <ranges>
 #include <vector>
 
+#define RLIGHTS_IMPLEMENTATION
 #include "raylib.h"
 #include "raymath.h"
+#include "rlights.h"
 #include "utilityStructures.hpp"
 
 bool Game::isPositionInRenderDistance(const Vector3& position) const {
@@ -47,6 +49,9 @@ void Game::drawPositionInfo(const Vector3& position) const {
 }
 
 void Game::draw() const {
+    SetShaderValue(terrainShader_, terrainShader_.locs[SHADER_LOC_VECTOR_VIEW], &camera_.position,
+                   SHADER_UNIFORM_VEC3);
+
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
@@ -68,16 +73,26 @@ void Game::draw() const {
 
     EndDrawing();
 
-    //std::cout << "Chunks rendering time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl;
+    // std::cout << "Chunks rendering time: " << (endTime - startTime) * 1000.0f << " ms" <<
+    // std::endl;
 }
 
 void Game::init() {
     DisableCursor();
     SetTargetFPS(0);  // Set to maximum FPS
 
-    instancedShader_ = LoadShader(
+    terrainShader_ = LoadShader(
         std::format("{}/resources/shaders/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(),
-        nullptr);
+        std::format("{}/resources/shaders/lighting.fs", CMAKE_ROOT_DIR).c_str());
+
+    float ambient[4] = {10.0f, 10.0f, 10.0f, 1.0f};
+    int ambLoc = GetShaderLocation(terrainShader_, "ambient");
+    SetShaderValue(terrainShader_, ambLoc, ambient, SHADER_UNIFORM_VEC4);
+
+    constexpr Vector3 lightPos = {5000.0f, 15000.0f, 7500.0f};
+    constexpr Color lightColor = {200, 200, 200, 255};
+    UpdateLightValues(terrainShader_, CreateLight(LIGHT_DIRECTIONAL, lightPos, Vector3Zero(),
+                                                  lightColor, terrainShader_));
 
     cubeMesh_ = GenMeshCube(1.0f, 1.0f, 1.0f);
     UploadMesh(&cubeMesh_, false);
@@ -87,21 +102,21 @@ void Game::init() {
     materialGrass_ = LoadMaterialDefault();
     materialGrass_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     materialGrass_.maps[MATERIAL_MAP_DIFFUSE].texture = grassTexture;
-    materialGrass_.shader = instancedShader_;
+    materialGrass_.shader = terrainShader_;
 
     const Texture2D dirtTexture =
         LoadTexture(std::format("{}/resources/textures/dirt.png", CMAKE_ROOT_DIR).c_str());
     materialDirt_ = LoadMaterialDefault();
     materialDirt_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     materialDirt_.maps[MATERIAL_MAP_DIFFUSE].texture = dirtTexture;  // Using the same texture
-    materialDirt_.shader = instancedShader_;
+    materialDirt_.shader = terrainShader_;
 
     const Texture2D stoneTexture =
         LoadTexture(std::format("{}/resources/textures/stone.png", CMAKE_ROOT_DIR).c_str());
     materialStone_ = LoadMaterialDefault();
     materialStone_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     materialStone_.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
-    materialStone_.shader = instancedShader_;
+    materialStone_.shader = terrainShader_;
 
     for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
         for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
@@ -114,7 +129,7 @@ void Game::init() {
                 }
 
                 auto [it, _] = world_.emplace(
-                    Vector3Int{x, y, z}, Chunk(x, y, z, instancedShader_, cubeMesh_, materialGrass_,
+                    Vector3Int{x, y, z}, Chunk(x, y, z, terrainShader_, cubeMesh_, materialGrass_,
                                                materialDirt_, materialStone_));
                 it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
             }
@@ -209,6 +224,12 @@ void Game::run() {
         // Update camera target
         // This is done after updating the position to prevent clipping when it moves
         camera_.target = Vector3Add(camera_.position, direction);
+
+        if (IsKeyDown(KEY_C)) {
+            camera_.fovy = 20;  // Zoom in
+        } else {
+            camera_.fovy = 80;  // Normal
+        }
 
         // Render
         draw();

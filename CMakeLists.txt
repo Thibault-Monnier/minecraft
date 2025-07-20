@@ -57,6 +57,7 @@ FetchContent_MakeAvailable(raylib)
 
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
         ${raylib_SOURCE_DIR}/src
+        resources/shaders
 )
 
 # === stb_perlin setup ===

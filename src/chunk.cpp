@@ -48,13 +48,13 @@ int getHeight(const int x, const int z, const int seed, const int maxWorldHeight
     const float n = raw / maxAmp;
 
     // normalize to [0,1]
-    float normalized = (n + 1.0f) * 0.5f;
+    const float normalized = (n + 1.0f) * 0.5f;
 
     //   Option A: linear map to [0, maxWorldHeight]
     // float h = normalized * maxWorldHeight;
 
     //   Option B: exponential for spikier relief
-    float height = std::pow(normalized, 1.5f) * static_cast<float>(maxWorldHeight);
+    const float height = std::pow(normalized, 1.5f) * static_cast<float>(maxWorldHeight);
 
     //   Option C: mix linear + exponent
     // const float heightLinear = normalized * 80.0f;                          // [0, 80]
@@ -107,7 +107,7 @@ void Chunk::generateTransforms(const Chunk* positiveXNeighbor, const Chunk* nega
         if (z >= CHUNK_SIZE && positiveZNeighbor) return positiveZNeighbor->data_[x][y][0];
 
         // No chunk there
-        return BlockType::BLOCK_STONE; // Solid block to avoid rendering
+        return BlockType::BLOCK_STONE;  // Solid block to avoid rendering
     };
 
     for (int x = 0; x < CHUNK_SIZE; x++) {
