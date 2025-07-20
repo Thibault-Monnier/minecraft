@@ -68,7 +68,7 @@ void Game::draw() const {
 
     EndDrawing();
 
-    std::cout << "Chunks rendering time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl;
+    //std::cout << "Chunks rendering time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl;
 }
 
 void Game::init() {

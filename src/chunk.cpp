@@ -33,7 +33,7 @@ float computeMaxAmplitude(const int octaves, const float gain) {
     return maxAmp;
 }
 
-int getHeight(const int x, const int z, const int seed) {
+int getHeight(const int x, const int z, const int seed, const int maxWorldHeight) {
     constexpr int octaves = 6;
     constexpr float lacunarity = 2.0f;
     constexpr float gain = 0.5f;
@@ -51,27 +51,26 @@ int getHeight(const int x, const int z, const int seed) {
     float normalized = (n + 1.0f) * 0.5f;
 
     //   Option A: linear map to [0, maxWorldHeight]
-    // const float maxWorldHeight = 200.0f;
     // float h = normalized * maxWorldHeight;
 
     //   Option B: exponential for spikier relief
-    // float h = std::pow(normalized, 1.5f) * maxWorldHeight;
+    float height = std::pow(normalized, 1.5f) * static_cast<float>(maxWorldHeight);
 
     //   Option C: mix linear + exponent
-    const float heightLinear = normalized * 80.0f;                          // [0, 80]
-    const float heightExponentiated = std::pow(normalized, 3.0f) * 120.0f;  // [0, 120]
-    const float height =
-        heightLinear * (1 - normalized) + heightExponentiated * normalized + 4;  // [4, 124]
+    // const float heightLinear = normalized * 80.0f;                          // [0, 80]
+    // const float heightExponentiated = std::pow(normalized, 3.0f) * 120.0f;  // [0, 120]
+    // const float height =
+    //     heightLinear * (1 - normalized) + heightExponentiated * normalized + 4;  // [4, 124]
 
     return static_cast<int>(std::ceil(height));
 }
 
-void Chunk::generate(const int seed, const int mapHeight) {
+void Chunk::generate(const int seed, const int maxHeight) {
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int z = 0; z < CHUNK_SIZE; z++) {
-            const int realHeight = getHeight(localToGlobalX(x), localToGlobalZ(z), seed);
+            const int realHeight = getHeight(localToGlobalX(x), localToGlobalZ(z), seed, maxHeight);
 
-            for (int globalY = localToGlobalY(0); globalY < mapHeight; globalY++) {
+            for (int globalY = localToGlobalY(0); globalY < maxHeight; globalY++) {
                 const int localY = globalToLocalY(globalY);
 
                 if (localY >= CHUNK_SIZE) break;

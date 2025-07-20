@@ -29,7 +29,7 @@ class Chunk {
                 static_cast<float>(chunkZ_ * CHUNK_SIZE)};
     }
 
-    void generate(int seed, int mapHeightChunks);
+    void generate(int seed, int maxHeight);
     void generateTransforms(const Chunk* positiveXNeighbor, const Chunk* negativeXNeighbor,
                             const Chunk* positiveYNeighbor, const Chunk* negativeYNeighbor,
                             const Chunk* positiveZNeighbor, const Chunk* negativeZNeighbor);
