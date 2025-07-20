@@ -75,12 +75,12 @@ void Chunk::generate(const int seed, const int maxHeight) {
 
                 if (localY >= CHUNK_SIZE) break;
 
-                if (globalY < realHeight - 4)
+                if (globalY < realHeight - 4 || (globalY >= 130 && globalY < realHeight))
                     data_[x][localY][z] = BlockType::BLOCK_STONE;  // Stone for lower layers
-                else if (globalY < realHeight - 1)
-                    data_[x][localY][z] = BlockType::BLOCK_DIRT;  // Grass for upper layers
-                else if (globalY == realHeight - 1)
+                else if (globalY == realHeight - 1 && globalY < 125)
                     data_[x][localY][z] = BlockType::BLOCK_GRASS;  // Grass on top
+                else if (globalY < realHeight)
+                    data_[x][localY][z] = BlockType::BLOCK_DIRT;  // Grass for upper layers
                 else {
                     data_[x][localY][z] = BlockType::BLOCK_AIR;  // Air above the terrain
                 }
