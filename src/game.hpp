@@ -9,7 +9,7 @@
 class Game {
    public:
     Game() {
-        camera_.position = {-4.0f, 4.0f, 0.0f};
+        camera_.position = {0.0f, 0.0f, 0.0f};
         camera_.target = {0.0f, 0.0f, 0.0f};
         camera_.up = {0.0f, 1.0f, 0.0f};
         camera_.fovy = 80.0f;
@@ -26,7 +26,7 @@ class Game {
     void init();
     void run();
 
-    constexpr static int RENDER_DISTANCE = 20;  // Render distance in chunks
+    constexpr static int RENDER_DISTANCE = 10S;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 256;
 
    private:

@@ -8,6 +8,8 @@ enum class BlockType { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE };
 
 class Chunk {
    public:
+    static constexpr int CHUNK_SIZE = 32;
+
     Chunk(const int x, const int y, const int z, const Shader& shader, const Mesh& cubeMesh,
           const Material& materialGrass, const Material& materialDirt,
           const Material& materialStone)
@@ -36,7 +38,10 @@ class Chunk {
 
     void render() const;
 
-    static constexpr int CHUNK_SIZE = 32;
+    typedef std::array<std::array<std::array<BlockType, CHUNK_SIZE>, CHUNK_SIZE>, CHUNK_SIZE>
+        ChunkData;
+
+    [[nodiscard]] const ChunkData& getData() const { return data_; }
 
    private:
     const int chunkX_;
@@ -52,9 +57,6 @@ class Chunk {
     std::vector<Matrix> grassTransforms;
     std::vector<Matrix> dirtTransforms;
     std::vector<Matrix> stoneTransforms;
-
-    typedef std::array<std::array<std::array<BlockType, CHUNK_SIZE>, CHUNK_SIZE>, CHUNK_SIZE>
-        ChunkData;
 
     ChunkData data_{};  // 3D array to hold the block types in the chunk
 

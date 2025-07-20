@@ -11,6 +11,7 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
     message(STATUS "No build type specified, defaulting to Debug")
 endif ()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include(FetchContent)
 

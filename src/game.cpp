@@ -157,6 +157,16 @@ void Game::init() {
     }
 
     std::cout << "Generated " << world_.size() << " chunks." << std::endl;
+
+    int startY = 0;
+    while (
+        world_.at({0, startY / Chunk::CHUNK_SIZE, 0}).getData()[0][startY % Chunk::CHUNK_SIZE][0] !=
+        BlockType::BLOCK_AIR) {
+        startY++;
+    }
+
+    startY += 2;                                                  // Start above the ground
+    camera_.position = {0.5f, static_cast<float>(startY), 0.5f};  // Start in middle of block
 }
 
 void Game::run() {
