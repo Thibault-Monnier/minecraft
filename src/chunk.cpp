@@ -108,7 +108,7 @@ void Chunk::generateTransforms(const Chunk* positiveXNeighbor, const Chunk* nega
         if (z >= CHUNK_SIZE && positiveZNeighbor) return positiveZNeighbor->data_[x][y][0];
 
         // No chunk there
-        return BlockType::BLOCK_AIR;
+        return BlockType::BLOCK_STONE; // Solid block to avoid rendering
     };
 
     for (int x = 0; x < CHUNK_SIZE; x++) {

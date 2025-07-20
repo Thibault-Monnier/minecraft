@@ -43,7 +43,6 @@ class Game {
     Material materialStone_{};
 
     void draw() const;
-    void generateChunk();
     void drawSky() const;
     void drawCursor() const;
     void drawFps() const;
