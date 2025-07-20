@@ -10,6 +10,11 @@
 #include "raymath.h"
 #include "utilityStructures.hpp"
 
+bool Game::isPositionInRenderDistance(const Vector3& position) const {
+    return Vector3DistanceSqr(position, camera_.position) <
+           RENDER_DISTANCE * RENDER_DISTANCE * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
+}
+
 void Game::drawSky() const {
     const int screenWidth = GetScreenWidth();
     const int screenHeight = GetScreenHeight();
@@ -51,7 +56,7 @@ void Game::draw() const {
 
     const auto startTime = static_cast<float>(GetTime());
     for (const auto& chunk : world_ | std::views::values) {
-        chunk.render();
+        if (isPositionInRenderDistance(chunk.getPositionBlocks())) chunk.render();
     }
     const auto endTime = static_cast<float>(GetTime());
 
@@ -98,12 +103,19 @@ void Game::init() {
     materialStone_.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
     materialStone_.shader = instancedShader_;
 
-    for (int x = 0; x < MAP_WIDTH_CHUNKS; x++) {
+    for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
         for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
-            for (int z = 0; z < MAP_DEPTH_CHUNKS; z++) {
-                auto [it, _] = world_.emplace(Vector3Integer{x, y, z},
-                                              Chunk(x, y, z, instancedShader_, cubeMesh_,
-                                                    materialGrass_, materialDirt_, materialStone_));
+            for (int z = -RENDER_DISTANCE; z < RENDER_DISTANCE; z++) {
+                if (!isPositionInRenderDistance(
+                        Vector3{static_cast<float>(x * Chunk::CHUNK_SIZE),
+                                static_cast<float>(y * Chunk::CHUNK_SIZE),
+                                static_cast<float>(z * Chunk::CHUNK_SIZE)})) {
+                    continue;
+                }
+
+                auto [it, _] = world_.emplace(
+                    Vector3Int{x, y, z}, Chunk(x, y, z, instancedShader_, cubeMesh_, materialGrass_,
+                                               materialDirt_, materialStone_));
                 it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
             }
         }
@@ -115,7 +127,7 @@ void Game::init() {
         const int z = chunk.getZ();
 
         auto findNeighbor = [&](const int dx, const int dy, const int dz) -> const Chunk* {
-            const auto it = world_.find(Vector3Integer{x + dx, y + dy, z + dz});
+            const auto it = world_.find(Vector3Int{x + dx, y + dy, z + dz});
             return (it != world_.end()) ? &it->second : nullptr;
         };
 

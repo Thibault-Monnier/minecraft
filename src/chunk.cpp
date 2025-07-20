@@ -118,12 +118,12 @@ void Chunk::generateTransforms(const Chunk* positiveXNeighbor, const Chunk* nega
                     continue;  // Skip air blocks
                 }
 
-                constexpr std::array<Vector3Integer, 6> neighborCubesOffsets = {
-                    {Vector3Integer{-1, 0, 0}, Vector3Integer{1, 0, 0}, Vector3Integer{0, -1, 0},
-                     Vector3Integer{0, 1, 0}, Vector3Integer{0, 0, -1}, Vector3Integer{0, 0, 1}}};
+                constexpr std::array<Vector3Int, 6> neighborCubesOffsets = {
+                    {Vector3Int{-1, 0, 0}, Vector3Int{1, 0, 0}, Vector3Int{0, -1, 0},
+                     Vector3Int{0, 1, 0}, Vector3Int{0, 0, -1}, Vector3Int{0, 0, 1}}};
 
                 bool isVisibleBlock = false;
-                for (const Vector3Integer& offset : neighborCubesOffsets) {
+                for (const Vector3Int& offset : neighborCubesOffsets) {
                     const int neighborX = x + static_cast<int>(offset.x);
                     const int neighborY = y + static_cast<int>(offset.y);
                     const int neighborZ = z + static_cast<int>(offset.z);

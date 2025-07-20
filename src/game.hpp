@@ -26,8 +26,7 @@ class Game {
     void init();
     void run();
 
-    constexpr static int MAP_WIDTH_CHUNKS = 24;
-    constexpr static int MAP_DEPTH_CHUNKS = 24;
+    constexpr static int RENDER_DISTANCE = 10;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 128;
 
    private:
@@ -35,7 +34,7 @@ class Game {
 
     Camera camera_{};
 
-    std::unordered_map<Vector3Integer, Chunk> world_{};
+    std::unordered_map<Vector3Int, Chunk> world_{};
 
     Shader instancedShader_{};
     Mesh cubeMesh_{};
@@ -44,8 +43,10 @@ class Game {
     Material materialStone_{};
 
     void draw() const;
+    void generateChunk();
     void drawSky() const;
     void drawCursor() const;
     void drawFps() const;
     void drawPositionInfo(const Vector3& position) const;
+    bool isPositionInRenderDistance(const Vector3& position) const;
 };

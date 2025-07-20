@@ -24,6 +24,11 @@ class Chunk {
     [[nodiscard]] int getY() const { return chunkY_; }
     [[nodiscard]] int getZ() const { return chunkZ_; }
 
+    [[nodiscard]] Vector3 getPositionBlocks() const {
+        return {static_cast<float>(chunkX_ * CHUNK_SIZE), static_cast<float>(chunkY_ * CHUNK_SIZE),
+                static_cast<float>(chunkZ_ * CHUNK_SIZE)};
+    }
+
     void generate(int seed, int mapHeightChunks);
     void generateTransforms(const Chunk* positiveXNeighbor, const Chunk* negativeXNeighbor,
                             const Chunk* positiveYNeighbor, const Chunk* negativeYNeighbor,
