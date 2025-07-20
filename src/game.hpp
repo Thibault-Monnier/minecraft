@@ -1,7 +1,6 @@
 #pragma once
 
-#include <unordered_map>
-
+#include "absl/container/flat_hash_map.h"
 #include "chunk.hpp"
 #include "raylib.h"
 #include "utilityStructures.hpp"
@@ -19,14 +18,12 @@ class Game {
     ~Game() {
         UnloadShader(terrainShader_);
         UnloadMesh(cubeMesh_);
-        UnloadMaterial(materialGrass_);
-        UnloadMaterial(materialStone_);
     }
 
     void init();
     void run();
 
-    constexpr static int RENDER_DISTANCE = 10S;  // Render distance in chunks
+    constexpr static int RENDER_DISTANCE = 10;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 256;
 
    private:
@@ -34,7 +31,7 @@ class Game {
 
     Camera camera_{};
 
-    std::unordered_map<Vector3Int, Chunk> world_{};
+    absl::flat_hash_map<Vector3Int, Chunk> world_{};
 
     Shader terrainShader_{};
     Mesh cubeMesh_{};

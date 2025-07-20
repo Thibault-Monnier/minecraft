@@ -55,10 +55,20 @@ FetchContent_Declare(
         GIT_TAG master
 )
 FetchContent_MakeAvailable(raylib)
-
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
         ${raylib_SOURCE_DIR}/src
         resources/shaders
+)
+
+# === abseil setup ===
+FetchContent_Declare(
+        abseil-cpp
+        GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+        GIT_TAG 20250512.1
+)
+FetchContent_MakeAvailable(abseil-cpp)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+        ${abseil-cpp_SOURCE_DIR}/absl
 )
 
 # === stb_perlin setup ===
@@ -72,6 +82,9 @@ target_include_directories(stb_perlin PUBLIC
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE raylib
+        PRIVATE absl::base
+        PRIVATE absl::flat_hash_map
+        PRIVATE absl::hash
         PRIVATE stb_perlin
         PRIVATE m pthread dl
 )

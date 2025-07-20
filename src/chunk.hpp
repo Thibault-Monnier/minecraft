@@ -26,9 +26,10 @@ class Chunk {
     [[nodiscard]] int getY() const { return chunkY_; }
     [[nodiscard]] int getZ() const { return chunkZ_; }
 
-    [[nodiscard]] Vector3 getPositionBlocks() const {
-        return {static_cast<float>(chunkX_ * CHUNK_SIZE), static_cast<float>(chunkY_ * CHUNK_SIZE),
-                static_cast<float>(chunkZ_ * CHUNK_SIZE)};
+    [[nodiscard]] Vector3 getCenterPosition() const {
+        return {(static_cast<float>(chunkX_) + 0.5f) * CHUNK_SIZE,
+                (static_cast<float>(chunkY_) + 0.5f) * CHUNK_SIZE,
+                (static_cast<float>(chunkZ_) + 0.5f) * CHUNK_SIZE};
     }
 
     void generate(int seed, int maxHeight);
@@ -48,11 +49,11 @@ class Chunk {
     const int chunkY_;
     const int chunkZ_;
 
-    const Shader instancedShader_;
-    const Mesh cubeMesh_;
-    const Material materialGrass_;
-    const Material materialDirt_;
-    const Material materialStone_;
+    const Shader& instancedShader_;
+    const Mesh& cubeMesh_;
+    const Material& materialGrass_;
+    const Material& materialDirt_;
+    const Material& materialStone_;
 
     std::vector<Matrix> grassTransforms;
     std::vector<Matrix> dirtTransforms;

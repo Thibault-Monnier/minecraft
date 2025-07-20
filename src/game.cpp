@@ -13,8 +13,9 @@
 #include "utilityStructures.hpp"
 
 bool Game::isPositionInRenderDistance(const Vector3& position) const {
-    return Vector3DistanceSqr(position, camera_.position) <
-           RENDER_DISTANCE * RENDER_DISTANCE * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
+    constexpr float maxDistanceSq =
+        RENDER_DISTANCE * RENDER_DISTANCE * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
+    return Vector3DistanceSqr(position, camera_.position) < maxDistanceSq;
 }
 
 void Game::drawSky() const {
@@ -59,11 +60,11 @@ void Game::draw() const {
 
     BeginMode3D(camera_);
 
-    const auto startTime = static_cast<float>(GetTime());
+    // const auto startTime = static_cast<float>(GetTime());
     for (const auto& chunk : world_ | std::views::values) {
-        if (isPositionInRenderDistance(chunk.getPositionBlocks())) chunk.render();
+        if (isPositionInRenderDistance(chunk.getCenterPosition())) chunk.render();
     }
-    const auto endTime = static_cast<float>(GetTime());
+    // const auto endTime = static_cast<float>(GetTime());
 
     EndMode3D();
 
@@ -118,23 +119,68 @@ void Game::init() {
     materialStone_.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
     materialStone_.shader = terrainShader_;
 
+    constexpr double chunksUpperBound =
+        static_cast<float>((RENDER_DISTANCE + M_SQRT1_2) * (RENDER_DISTANCE + M_SQRT1_2)) * M_PI *
+        MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE;
+    world_.reserve(static_cast<size_t>(chunksUpperBound));
+
+    double first = 0.0;
+    double second = 0.0;
+
+    auto generateChunk = [&](const Vector3Int& pos) {
+        double time = GetTime();
+        auto [it, _] = world_.emplace(pos, Chunk(pos.x, pos.y, pos.z, terrainShader_, cubeMesh_,
+                                                 materialGrass_, materialDirt_, materialStone_));
+        double time2 = GetTime();
+        it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
+        double time3 = GetTime();
+        first += time2 - time;
+        second += time3 - time2;
+    };
+
+    // Generate spawn chunks first to know the starting position for accurate render distance
+    double startTime = GetTime();
+    for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
+        generateChunk({0, y, 0});
+    }
+    double intermediateTime = GetTime();
+
+    // Determine the starting position
+    int startY = 0;
+    while (
+        world_.at({0, startY / Chunk::CHUNK_SIZE, 0}).getData()[0][startY % Chunk::CHUNK_SIZE][0] !=
+        BlockType::BLOCK_AIR) {
+        startY++;
+    }
+    startY += 2;                                                  // Start above the ground
+    camera_.position = {0.5f, static_cast<float>(startY), 0.5f};  // Middle of the block
+
+    // Generate the remaining chunks
     for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
         for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
             for (int z = -RENDER_DISTANCE; z < RENDER_DISTANCE; z++) {
+                if (x == 0 && z == 0) continue;
+
                 if (!isPositionInRenderDistance(
-                        Vector3{static_cast<float>(x * Chunk::CHUNK_SIZE),
-                                static_cast<float>(y * Chunk::CHUNK_SIZE),
-                                static_cast<float>(z * Chunk::CHUNK_SIZE)})) {
+                        Vector3{static_cast<float>(x * Chunk::CHUNK_SIZE) + 0.5f,
+                                static_cast<float>(y * Chunk::CHUNK_SIZE) + 0.5f,
+                                static_cast<float>(z * Chunk::CHUNK_SIZE) +
+                                    0.5f})) {  // Center of the chunk
                     continue;
                 }
 
-                auto [it, _] = world_.emplace(
-                    Vector3Int{x, y, z}, Chunk(x, y, z, terrainShader_, cubeMesh_, materialGrass_,
-                                               materialDirt_, materialStone_));
-                it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
+                generateChunk({x, y, z});
             }
         }
     }
+    double endTime = GetTime();
+    std::cout << "Chunks generation time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl
+              << "Chunks generated: " << world_.size() << std::endl;
+    std::cout << "Intermediate time: " << (intermediateTime - startTime) * 1000.0f << " ms"
+              << std::endl;
+
+    std::cout << "Partial times: " << (first) * 1000.0f << " ms (chunk init), "
+              << (second) * 1000.0f << " ms (chunk generation)" << std::endl;
 
     for (auto& chunk : world_ | std::views::values) {
         const int x = chunk.getX();
@@ -157,16 +203,6 @@ void Game::init() {
     }
 
     std::cout << "Generated " << world_.size() << " chunks." << std::endl;
-
-    int startY = 0;
-    while (
-        world_.at({0, startY / Chunk::CHUNK_SIZE, 0}).getData()[0][startY % Chunk::CHUNK_SIZE][0] !=
-        BlockType::BLOCK_AIR) {
-        startY++;
-    }
-
-    startY += 2;                                                  // Start above the ground
-    camera_.position = {0.5f, static_cast<float>(startY), 0.5f};  // Start in middle of block
 }
 
 void Game::run() {
