@@ -10,13 +10,12 @@ class Chunk {
    public:
     static constexpr int CHUNK_SIZE = 32;
 
-    Chunk(const int x, const int y, const int z, const Shader& shader, const Mesh& cubeMesh,
+    Chunk(const int x, const int y, const int z, const Mesh& cubeMesh,
           const Material& materialGrass, const Material& materialDirt,
           const Material& materialStone)
         : chunkX_(x),
           chunkY_(y),
           chunkZ_(z),
-          instancedShader_(shader),
           cubeMesh_(cubeMesh),
           materialGrass_(materialGrass),
           materialDirt_(materialDirt),
@@ -49,7 +48,6 @@ class Chunk {
     const int chunkY_;
     const int chunkZ_;
 
-    const Shader& instancedShader_;
     const Mesh& cubeMesh_;
     const Material& materialGrass_;
     const Material& materialDirt_;

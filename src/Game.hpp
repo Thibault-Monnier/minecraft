@@ -17,7 +17,7 @@ class Game {
     void init();
     void run();
 
-    constexpr static int RENDER_DISTANCE = 20;  // Render distance in chunks
+    constexpr static int RENDER_DISTANCE = 5;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 512;
 
    private:

@@ -25,7 +25,7 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow
+        -Wall -Wextra -Wshadow
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

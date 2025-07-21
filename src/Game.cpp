@@ -1,10 +1,8 @@
 #include "Game.hpp"
 
-#include <cstdio>
 #include <format>
 #include <iostream>
 #include <ranges>
-#include <vector>
 
 #define RLIGHTS_IMPLEMENTATION
 #include "Perf.hpp"
@@ -128,8 +126,8 @@ void Game::init() {
     world_.reserve(static_cast<size_t>(chunksUpperBound));
 
     auto generateChunk = [&](const Vector3Int& pos) {
-        auto [it, _] = world_.emplace(pos, Chunk(pos.x, pos.y, pos.z, terrainShader_, cubeMesh_,
-                                                 materialGrass_, materialDirt_, materialStone_));
+        auto [it, _] = world_.emplace(pos, Chunk(pos.x, pos.y, pos.z, cubeMesh_, materialGrass_,
+                                                 materialDirt_, materialStone_));
         it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
     };
 
