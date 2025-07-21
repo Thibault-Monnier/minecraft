@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "game.hpp"
+#include "perf.hpp"
 #include "raymath.h"
 #include "stb_perlin.h"
 #include "utilityStructures.hpp"
@@ -54,7 +55,7 @@ int getHeight(const int x, const int z, const int seed, const int maxWorldHeight
     // float h = normalized * maxWorldHeight;
 
     //   Option B: exponential for spikier relief
-    const float height = std::pow(normalized, 1.5f) * static_cast<float>(maxWorldHeight);
+    const float height = std::pow(normalized, 4.0f) * static_cast<float>(maxWorldHeight);
 
     //   Option C: mix linear + exponent
     // const float heightLinear = normalized * 80.0f;                          // [0, 80]
@@ -66,25 +67,42 @@ int getHeight(const int x, const int z, const int seed, const int maxWorldHeight
 }
 
 void Chunk::generate(const int seed, const int maxHeight) {
+    // static uint64_t globalIterations = 0;
+    // const uint64_t firstMeasuredIteration = 10000;
+    // const uint64_t nbMeasurements = 1e8;
+    // uint64_t startCycles = 0;
+
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int z = 0; z < CHUNK_SIZE; z++) {
             const int realHeight = getHeight(localToGlobalX(x), localToGlobalZ(z), seed, maxHeight);
 
-            for (int globalY = localToGlobalY(0); globalY < maxHeight; globalY++) {
-                const int localY = globalToLocalY(globalY);
+            if (localToGlobalY(0) >= realHeight) {
+                continue;
+            }
 
-                if (localY >= CHUNK_SIZE) break;
+            // const bool isMeasured = globalIterations >= firstMeasuredIteration &&
+            //                         globalIterations < firstMeasuredIteration + nbMeasurements;
+            // globalIterations++;
+            // if (isMeasured) {
+            //     perfNbIterations++;
+            //     startCycles = get_cycles();
+            // }
 
-                if (globalY < realHeight - 4 || (globalY >= 130 && globalY < realHeight))
-                    data_[x][localY][z] = BlockType::BLOCK_STONE;  // Stone for lower layers
-                else if (globalY == realHeight - 1 && globalY < 125)
-                    data_[x][localY][z] = BlockType::BLOCK_GRASS;  // Grass on top
-                else if (globalY < realHeight)
-                    data_[x][localY][z] = BlockType::BLOCK_DIRT;  // Grass for upper layers
-                else {
-                    data_[x][localY][z] = BlockType::BLOCK_AIR;  // Air above the terrain
+            const int lastY = std::min(realHeight - localToGlobalY(0), CHUNK_SIZE);
+            for (int localY = 0; localY < lastY; localY++) {
+                const int globalYToRealHeight = localToGlobalY(localY);
+                if (globalYToRealHeight <= realHeight - 4) {
+                    data_[x][localY][z] = BlockType::BLOCK_STONE;
+                } else if (globalYToRealHeight <= realHeight - 2) {
+                    data_[x][localY][z] = BlockType::BLOCK_DIRT;
+                } else {
+                    data_[x][localY][z] = BlockType::BLOCK_GRASS;
                 }
             }
+
+            // if (isMeasured) {
+            //     perfNbCycles += get_cycles() - startCycles;
+            // }
         }
     }
 }

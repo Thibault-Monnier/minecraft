@@ -6,3 +6,9 @@ cmake --build build
 ```
 
 The executable will be `build/minecraft`.
+
+Perf
+
+```bash
+sudo chrt -f 99 taskset -c 4 ./build-release/minecraft
+```

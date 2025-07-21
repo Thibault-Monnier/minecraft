@@ -7,6 +7,7 @@
 #include <vector>
 
 #define RLIGHTS_IMPLEMENTATION
+#include "perf.hpp"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlights.h"
@@ -178,10 +179,13 @@ void Game::init() {
               << "Chunks generated: " << world_.size() << std::endl;
     std::cout << "Intermediate time: " << (intermediateTime - startTime) * 1000.0f << " ms"
               << std::endl;
+    // std::cout << "Nb iterations: " << perfNbIterations << " - Nb cycles: " << perfNbCycles
+    //           << std::endl << "Cycles per iteration: " << (perfNbCycles / perfNbIterations) << std::endl;
 
     std::cout << "Partial times: " << (first) * 1000.0f << " ms (chunk init), "
               << (second) * 1000.0f << " ms (chunk generation)" << std::endl;
 
+    double transformStartTime = GetTime();
     for (auto& chunk : world_ | std::views::values) {
         const int x = chunk.getX();
         const int y = chunk.getY();
@@ -201,15 +205,20 @@ void Game::init() {
 
         chunk.generateTransforms(posX, negX, posY, negY, posZ, negZ);
     }
+    double transformEndTime = GetTime();
+
+    std::cout << "Chunk transforms generation time: "
+              << (transformEndTime - transformStartTime) * 1000.0f << " ms" << std::endl;
 
     std::cout << "Generated " << world_.size() << " chunks." << std::endl;
 }
 
 void Game::run() {
-    const float cameraMovementSpeedSlow = 4.3f;   // Speed of camera movement without SHIFT
-    const float cameraMovementSpeedFast = 17.5f;  // Speed of camera movement when holding SHIFT
-    const float cameraMovementSpeedVerticalMultiplier = 1.5f;  // Vertical movement speed multiplier
-    const float cameraSensitivity = 0.0025f;                   // Sensitivity for mouse movement
+    constexpr float cameraMovementSpeedSlow = 4.3f;   // Speed of camera movement without SHIFT
+    constexpr float cameraMovementSpeedFast = 17.5f;  // Speed of camera movement when holding SHIFT
+    constexpr float cameraMovementSpeedVerticalMultiplier =
+        1.5f;                                     // Vertical movement speed multiplier
+    constexpr float cameraSensitivity = 0.0025f;  // Sensitivity for mouse movement
 
     float cameraYaw = 0.0f;    // Yaw angle for camera rotation
     float cameraPitch = 0.0f;  // Pitch angle for camera rotation
@@ -218,14 +227,14 @@ void Game::run() {
 
     while (!WindowShouldClose()) {
         // Calculate camera rotation
-        Vector2 mouseDelta = GetMouseDelta();
+        const Vector2 mouseDelta = GetMouseDelta();
         cameraYaw += mouseDelta.x * cameraSensitivity;
         cameraPitch -= mouseDelta.y * cameraSensitivity;
         cameraPitch = Clamp(cameraPitch, -89.0f / 180.0f * M_PI,
                             89.0f / 180.0f * M_PI);  // Limit pitch to avoid flipping
 
-        Vector3 direction = {cosf(cameraYaw) * cosf(cameraPitch), sinf(cameraPitch),
-                             sinf(cameraYaw) * cosf(cameraPitch)};
+        const Vector3 direction = {cosf(cameraYaw) * cosf(cameraPitch), sinf(cameraPitch),
+                                   sinf(cameraYaw) * cosf(cameraPitch)};
 
         // Update camera position
         Vector2 movement2DRelative = {0.0f, 0.0f};
