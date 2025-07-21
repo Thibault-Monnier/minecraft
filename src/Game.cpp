@@ -127,18 +127,10 @@ void Game::init() {
         MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE;
     world_.reserve(static_cast<size_t>(chunksUpperBound));
 
-    double first = 0.0;
-    double second = 0.0;
-
     auto generateChunk = [&](const Vector3Int& pos) {
-        const double time = GetTime();
         auto [it, _] = world_.emplace(pos, Chunk(pos.x, pos.y, pos.z, terrainShader_, cubeMesh_,
                                                  materialGrass_, materialDirt_, materialStone_));
-        const double time2 = GetTime();
         it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
-        const double time3 = GetTime();
-        first += time2 - time;
-        second += time3 - time2;
     };
 
     // Generate spawn chunks first to know the starting position for accurate render distance
@@ -146,7 +138,6 @@ void Game::init() {
     for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
         generateChunk({0, y, 0});
     }
-    const double intermediateTime = GetTime();
 
     // Determine the starting position
     int startY = 0;
@@ -177,16 +168,8 @@ void Game::init() {
         }
     }
     const double endTime = GetTime();
-    std::cout << "Chunks generation time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl
-              << "Chunks generated: " << world_.size() << std::endl;
-    std::cout << "Intermediate time: " << (intermediateTime - startTime) * 1000.0f << " ms"
+    std::cout << "Terrain generation time: " << (endTime - startTime) * 1000.0f << " ms"
               << std::endl;
-    // std::cout << "Nb iterations: " << perfNbIterations << " - Nb cycles: " << perfNbCycles
-    //           << std::endl << "Cycles per iteration: " << (perfNbCycles / perfNbIterations) <<
-    //           std::endl;
-
-    std::cout << "Partial times: " << (first) * 1000.0f << " ms (chunk init), "
-              << (second) * 1000.0f << " ms (chunk generation)" << std::endl;
 
     const double transformStartTime = GetTime();
     for (auto& chunk : world_ | std::views::values) {
@@ -208,12 +191,12 @@ void Game::init() {
 
         chunk.generateTransforms(posX, negX, posY, negY, posZ, negZ);
     }
-    const double transformEndTime = GetTime();
+    const double transformsEndTime = GetTime();
+    std::cout << "Block transforms generation time: "
+              << (transformsEndTime - transformStartTime) * 1000.0f << " ms" << std::endl;
 
-    std::cout << "Chunk transforms generation time: "
-              << (transformEndTime - transformStartTime) * 1000.0f << " ms" << std::endl;
-
-    std::cout << "Generated " << world_.size() << " chunks." << std::endl;
+    std::cout << "Generated " << world_.size() << " chunks in "
+              << (transformsEndTime - startTime) * 1000.0f << " ms" << std::endl;
 }
 
 void Game::run() {
