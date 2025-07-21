@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.30)
 project(minecraft)
 
+if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR
+            "This project requires Clang (found: ${CMAKE_CXX_COMPILER_ID})\n"
+            "Try adding:\n -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+    )
+endif ()
+
+
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
