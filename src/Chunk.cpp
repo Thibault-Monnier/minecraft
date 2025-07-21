@@ -1,14 +1,14 @@
-#include "chunk.hpp"
+#include "Chunk.hpp"
 
 #include <cmath>
 #include <format>
 #include <stdexcept>
 
-#include "game.hpp"
-#include "perf.hpp"
+#include "Game.hpp"
+#include "Perf.hpp"
+#include "UtilityStructures.hpp"
 #include "raymath.h"
 #include "stb_perlin.h"
-#include "utilityStructures.hpp"
 
 float fBm(const float x, const float z, const int octaves, const float lacunarity, const float gain,
           const int seed) {

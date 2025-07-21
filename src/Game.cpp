@@ -1,4 +1,4 @@
-#include "game.hpp"
+#include "Game.hpp"
 
 #include <cstdio>
 #include <format>
@@ -7,19 +7,19 @@
 #include <vector>
 
 #define RLIGHTS_IMPLEMENTATION
-#include "perf.hpp"
+#include "Perf.hpp"
+#include "UtilityStructures.hpp"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlights.h"
-#include "utilityStructures.hpp"
 
 bool Game::isPositionInRenderDistance(const Vector3& position) const {
     constexpr float maxDistanceSq =
         RENDER_DISTANCE * RENDER_DISTANCE * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
-    return Vector3DistanceSqr(position, camera_.position) < maxDistanceSq;
+    return Vector3DistanceSqr(position, player_.getPosition()) < maxDistanceSq;
 }
 
-void Game::drawSky() const {
+void Game::drawSky() {
     const int screenWidth = GetScreenWidth();
     const int screenHeight = GetScreenHeight();
 
@@ -27,7 +27,7 @@ void Game::drawSky() const {
                            {65, 105, 225, 255});
 }
 
-void Game::drawCursor() const {
+void Game::drawCursor() {
     const int screenWidth = GetScreenWidth();
     const int screenHeight = GetScreenHeight();
     const Vector2 center = {static_cast<float>(screenWidth) / 2.0f,
@@ -37,13 +37,13 @@ void Game::drawCursor() const {
     DrawCircleLinesV(center, 1.0f, BLACK);  // Draw a dot in the center
 }
 
-void Game::drawFps() const {
+void Game::drawFps() {
     const int screenWidth = GetScreenWidth();
     const int screenHeight = GetScreenHeight();
     DrawText(TextFormat("FPS: %i", GetFPS()), screenWidth - 100, screenHeight - 30, 20, BLACK);
 }
 
-void Game::drawPositionInfo(const Vector3& position) const {
+void Game::drawPositionInfo(const Vector3& position) {
     DrawRectangle(10, 10, 200, 80, Fade(BLACK, 0.35f));  // Semi-transparent background
     DrawRectangleLines(10, 10, 200, 80, BLACK);          // Border around the rectangle
     DrawText(TextFormat("X: %.2f\nY: %.2f\nZ: %.2f", position.x, position.y, position.z), 20, 20,
@@ -51,6 +51,8 @@ void Game::drawPositionInfo(const Vector3& position) const {
 }
 
 void Game::draw() const {
+    const Camera& camera_ = player_.getCamera();
+
     SetShaderValue(terrainShader_, terrainShader_.locs[SHADER_LOC_VECTOR_VIEW], &camera_.position,
                    SHADER_UNIFORM_VEC3);
 
@@ -129,22 +131,22 @@ void Game::init() {
     double second = 0.0;
 
     auto generateChunk = [&](const Vector3Int& pos) {
-        double time = GetTime();
+        const double time = GetTime();
         auto [it, _] = world_.emplace(pos, Chunk(pos.x, pos.y, pos.z, terrainShader_, cubeMesh_,
                                                  materialGrass_, materialDirt_, materialStone_));
-        double time2 = GetTime();
+        const double time2 = GetTime();
         it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
-        double time3 = GetTime();
+        const double time3 = GetTime();
         first += time2 - time;
         second += time3 - time2;
     };
 
     // Generate spawn chunks first to know the starting position for accurate render distance
-    double startTime = GetTime();
+    const double startTime = GetTime();
     for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
         generateChunk({0, y, 0});
     }
-    double intermediateTime = GetTime();
+    const double intermediateTime = GetTime();
 
     // Determine the starting position
     int startY = 0;
@@ -153,8 +155,8 @@ void Game::init() {
         BlockType::BLOCK_AIR) {
         startY++;
     }
-    startY += 2;                                                  // Start above the ground
-    camera_.position = {0.5f, static_cast<float>(startY), 0.5f};  // Middle of the block
+    startY += 2;                                                    // Start above the ground
+    player_.setPosition({0.5f, static_cast<float>(startY), 0.5f});  // Middle of the block
 
     // Generate the remaining chunks
     for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
@@ -174,18 +176,19 @@ void Game::init() {
             }
         }
     }
-    double endTime = GetTime();
+    const double endTime = GetTime();
     std::cout << "Chunks generation time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl
               << "Chunks generated: " << world_.size() << std::endl;
     std::cout << "Intermediate time: " << (intermediateTime - startTime) * 1000.0f << " ms"
               << std::endl;
     // std::cout << "Nb iterations: " << perfNbIterations << " - Nb cycles: " << perfNbCycles
-    //           << std::endl << "Cycles per iteration: " << (perfNbCycles / perfNbIterations) << std::endl;
+    //           << std::endl << "Cycles per iteration: " << (perfNbCycles / perfNbIterations) <<
+    //           std::endl;
 
     std::cout << "Partial times: " << (first) * 1000.0f << " ms (chunk init), "
               << (second) * 1000.0f << " ms (chunk generation)" << std::endl;
 
-    double transformStartTime = GetTime();
+    const double transformStartTime = GetTime();
     for (auto& chunk : world_ | std::views::values) {
         const int x = chunk.getX();
         const int y = chunk.getY();
@@ -205,7 +208,7 @@ void Game::init() {
 
         chunk.generateTransforms(posX, negX, posY, negY, posZ, negZ);
     }
-    double transformEndTime = GetTime();
+    const double transformEndTime = GetTime();
 
     std::cout << "Chunk transforms generation time: "
               << (transformEndTime - transformStartTime) * 1000.0f << " ms" << std::endl;
@@ -214,79 +217,9 @@ void Game::init() {
 }
 
 void Game::run() {
-    constexpr float cameraMovementSpeedSlow = 4.3f;   // Speed of camera movement without SHIFT
-    constexpr float cameraMovementSpeedFast = 17.5f;  // Speed of camera movement when holding SHIFT
-    constexpr float cameraMovementSpeedVerticalMultiplier =
-        1.5f;                                     // Vertical movement speed multiplier
-    constexpr float cameraSensitivity = 0.0025f;  // Sensitivity for mouse movement
-
-    float cameraYaw = 0.0f;    // Yaw angle for camera rotation
-    float cameraPitch = 0.0f;  // Pitch angle for camera rotation
-
-    float cameraCurrentMovementSpeed = cameraMovementSpeedSlow;  // Current speed of the camera
-
     while (!WindowShouldClose()) {
-        // Calculate camera rotation
-        const Vector2 mouseDelta = GetMouseDelta();
-        cameraYaw += mouseDelta.x * cameraSensitivity;
-        cameraPitch -= mouseDelta.y * cameraSensitivity;
-        cameraPitch = Clamp(cameraPitch, -89.0f / 180.0f * M_PI,
-                            89.0f / 180.0f * M_PI);  // Limit pitch to avoid flipping
+        player_.update();
 
-        const Vector3 direction = {cosf(cameraYaw) * cosf(cameraPitch), sinf(cameraPitch),
-                                   sinf(cameraYaw) * cosf(cameraPitch)};
-
-        // Update camera position
-        Vector2 movement2DRelative = {0.0f, 0.0f};
-        float moveUp = 0.0f;
-
-        if (IsKeyDown(KEY_W))
-            movement2DRelative.x = 1.0f;
-        else if (IsKeyDown(KEY_S))
-            movement2DRelative.x = -1.0f;
-
-        if (IsKeyDown(KEY_A))
-            movement2DRelative.y = 1.0f;
-        else if (IsKeyDown(KEY_D))
-            movement2DRelative.y = -1.0f;
-
-        movement2DRelative = Vector2Normalize(movement2DRelative);
-
-        if (IsKeyDown(KEY_SPACE))
-            moveUp = 1.0f;
-        else if (IsKeyDown(KEY_LEFT_CONTROL))
-            moveUp = -1.0f;
-
-        if (IsKeyPressed(KEY_LEFT_SHIFT)) {
-            cameraCurrentMovementSpeed = (cameraCurrentMovementSpeed == cameraMovementSpeedSlow)
-                                             ? cameraMovementSpeedFast
-                                             : cameraMovementSpeedSlow;
-        }
-
-        const float deltaTime = GetFrameTime();
-        const float speedFactor = deltaTime * cameraCurrentMovementSpeed;
-
-        Vector2 forward2D = {cosf(cameraYaw), sinf(cameraYaw)};
-        Vector2 right2D = {forward2D.y, -forward2D.x};
-
-        camera_.position.x +=
-            (forward2D.x * movement2DRelative.x + right2D.x * movement2DRelative.y) * speedFactor;
-        camera_.position.z +=
-            (forward2D.y * movement2DRelative.x + right2D.y * movement2DRelative.y) * speedFactor;
-
-        camera_.position.y += moveUp * speedFactor * cameraMovementSpeedVerticalMultiplier;
-
-        // Update camera target
-        // This is done after updating the position to prevent clipping when it moves
-        camera_.target = Vector3Add(camera_.position, direction);
-
-        if (IsKeyDown(KEY_C)) {
-            camera_.fovy = 20;  // Zoom in
-        } else {
-            camera_.fovy = 80;  // Normal
-        }
-
-        // Render
         draw();
     }
 }
