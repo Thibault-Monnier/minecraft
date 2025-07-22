@@ -9,6 +9,7 @@ struct Keybinds {
     int jump;
     int crouch;
     int run;
+    int superRun;
     int zoomIn;
 };
 
@@ -34,9 +35,15 @@ class Player {
    private:
     constexpr static float walkingSpeed_ = 4.3f;
     constexpr static float runningSpeed_ = 17.5f;
+    constexpr static float superRunningSpeed_ = 50.0f;
     constexpr static float verticalSpeedMultiplier_ = 1.5f;
 
-    bool isRunning_ = false;
+    enum class MovementMode {
+        WALKING,
+        RUNNING,
+        SUPER_RUNNING,
+    };
+    MovementMode movementMode_ = MovementMode::WALKING;
 
     constexpr static float cameraSensitivity_ = 0.0025f;
     constexpr static float cameraFov_ = 80.0f;
@@ -53,6 +60,7 @@ class Player {
         .jump = KEY_SPACE,
         .crouch = KEY_LEFT_CONTROL,
         .run = KEY_LEFT_SHIFT,
+        .superRun = KEY_LEFT_ALT,
         .zoomIn = KEY_C,
     };
 

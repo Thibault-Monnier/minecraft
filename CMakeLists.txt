@@ -16,8 +16,7 @@ set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 
 # Default to Debug build if not specified
 if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-    message(STATUS "No build type specified, defaulting to Debug")
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif ()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
@@ -41,15 +40,12 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(${PROJECT_NAME} PRIVATE
-            -fsanitize=address,undefined
-            -g
-            -fno-omit-frame-pointer
-            -O0
-    )
-    target_link_options(${PROJECT_NAME} PRIVATE
-            -fsanitize=address,undefined
-    )
+    set(SAN_FLAGS "-fsanitize=address,undefined,leak,signed-integer-overflow -fno-omit-frame-pointer -O0 -g")
+
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${SAN_FLAGS}")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${SAN_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=address,undefined,leak")
+    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -fsanitize=address,undefined,leak")
 
 else ()
     target_compile_options(${PROJECT_NAME} PRIVATE -O3)

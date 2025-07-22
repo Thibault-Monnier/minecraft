@@ -1,10 +1,13 @@
 #pragma once
+
 #include <array>
+#include <cstdint>
 #include <vector>
 
+#include "UtilityTypes.hpp"
 #include "raylib.h"
 
-enum class BlockType { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE };
+enum class BlockType : uint8_t { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE };
 
 class Chunk {
    public:
@@ -32,9 +35,13 @@ class Chunk {
     }
 
     void generate(int seed, int maxHeight);
-    void generateTransforms(const Chunk* positiveXNeighbor, const Chunk* negativeXNeighbor,
-                            const Chunk* positiveYNeighbor, const Chunk* negativeYNeighbor,
-                            const Chunk* positiveZNeighbor, const Chunk* negativeZNeighbor);
+
+    void generateTransforms(OptionalRef<Chunk> adjacentChunkPositiveX,
+                            OptionalRef<Chunk> adjacentChunkNegativeX,
+                            OptionalRef<Chunk> adjacentChunkPositiveY,
+                            OptionalRef<Chunk> adjacentChunkNegativeY,
+                            OptionalRef<Chunk> adjacentChunkPositiveZ,
+                            OptionalRef<Chunk> adjacentChunkNegativeZ);
 
     void render() const;
 
@@ -56,6 +63,8 @@ class Chunk {
     std::vector<Matrix> grassTransforms;
     std::vector<Matrix> dirtTransforms;
     std::vector<Matrix> stoneTransforms;
+
+    bool areTransformsFullyGenerated_ = false;
 
     ChunkData data_{};  // 3D array to hold the block types in the chunk
 

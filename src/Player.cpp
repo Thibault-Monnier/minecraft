@@ -11,8 +11,21 @@ void Player::update() {
 void Player::updatePosition() {
     const float deltaTime = GetFrameTime();
 
-    if (IsKeyPressed(KEY_LEFT_SHIFT)) isRunning_ = !isRunning_;
-    const float movementDistance = deltaTime * (isRunning_ ? runningSpeed_ : walkingSpeed_);
+    if (IsKeyPressed(KEY_LEFT_SHIFT)) {
+        if (movementMode_ == MovementMode::WALKING) {
+            movementMode_ = MovementMode::RUNNING;
+        } else if (movementMode_ == MovementMode::RUNNING) {
+            movementMode_ = MovementMode::SUPER_RUNNING;
+        } else {
+            movementMode_ = MovementMode::WALKING;
+        }
+    }
+
+    const float movementSpeed = (movementMode_ == MovementMode::WALKING)   ? walkingSpeed_
+                                : (movementMode_ == MovementMode::RUNNING) ? runningSpeed_
+
+                                                                           : superRunningSpeed_;
+    const float movementDistance = deltaTime * movementSpeed;
 
     Vector2 movement2DRelative = {0.0f, 0.0f};
     if (IsKeyDown(KEY_W))

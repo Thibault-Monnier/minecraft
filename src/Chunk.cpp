@@ -6,7 +6,6 @@
 
 #include "Game.hpp"
 #include "Perf.hpp"
-#include "UtilityStructures.hpp"
 #include "raymath.h"
 #include "stb_perlin.h"
 
@@ -107,22 +106,37 @@ void Chunk::generate(const int seed, const int maxHeight) {
     }
 }
 
-void Chunk::generateTransforms(const Chunk* positiveXNeighbor, const Chunk* negativeXNeighbor,
-                               const Chunk* positiveYNeighbor, const Chunk* negativeYNeighbor,
-                               const Chunk* positiveZNeighbor, const Chunk* negativeZNeighbor) {
-    auto dataWithSentinel = [this, &positiveXNeighbor, &negativeXNeighbor, &positiveYNeighbor,
-                             &negativeYNeighbor, &positiveZNeighbor, &negativeZNeighbor](
-                                const int x, const int y, const int z) -> BlockType {
+void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
+                               const OptionalRef<Chunk> adjacentChunkNegativeX,
+                               const OptionalRef<Chunk> adjacentChunkPositiveY,
+                               const OptionalRef<Chunk> adjacentChunkNegativeY,
+                               const OptionalRef<Chunk> adjacentChunkPositiveZ,
+                               const OptionalRef<Chunk> adjacentChunkNegativeZ) {
+    if (areTransformsFullyGenerated_) {
+        return;
+    }
+
+    stoneTransforms.clear();
+    dirtTransforms.clear();
+    grassTransforms.clear();
+
+    auto dataWithSentinel = [&](const int x, const int y, const int z) -> BlockType {
         if (x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
             return data_[x][y][z];
         }
 
-        if (x < 0 && negativeXNeighbor) return negativeXNeighbor->data_[CHUNK_SIZE - 1][y][z];
-        if (x >= CHUNK_SIZE && positiveXNeighbor) return positiveXNeighbor->data_[0][y][z];
-        if (y < 0 && negativeYNeighbor) return negativeYNeighbor->data_[x][CHUNK_SIZE - 1][z];
-        if (y >= CHUNK_SIZE && positiveYNeighbor) return positiveYNeighbor->data_[x][0][z];
-        if (z < 0 && negativeZNeighbor) return negativeZNeighbor->data_[x][y][CHUNK_SIZE - 1];
-        if (z >= CHUNK_SIZE && positiveZNeighbor) return positiveZNeighbor->data_[x][y][0];
+        if (x < 0 && adjacentChunkNegativeX)
+            return adjacentChunkNegativeX->get().data_[CHUNK_SIZE - 1][y][z];
+        if (x >= CHUNK_SIZE && adjacentChunkPositiveX)
+            return adjacentChunkPositiveX->get().data_[0][y][z];
+        if (y < 0 && adjacentChunkNegativeY)
+            return adjacentChunkNegativeY->get().data_[x][CHUNK_SIZE - 1][z];
+        if (y >= CHUNK_SIZE && adjacentChunkPositiveY)
+            return adjacentChunkPositiveY->get().data_[x][0][z];
+        if (z < 0 && adjacentChunkNegativeZ)
+            return adjacentChunkNegativeZ->get().data_[x][y][CHUNK_SIZE - 1];
+        if (z >= CHUNK_SIZE && adjacentChunkPositiveZ)
+            return adjacentChunkPositiveZ->get().data_[x][y][0];
 
         // No chunk there
         return BlockType::BLOCK_STONE;  // Solid block to avoid rendering
@@ -135,22 +149,21 @@ void Chunk::generateTransforms(const Chunk* positiveXNeighbor, const Chunk* nega
                     continue;  // Skip air blocks
                 }
 
-                constexpr std::array<Vector3Int, 6> neighborCubesOffsets = {
-                    {Vector3Int{-1, 0, 0}, Vector3Int{1, 0, 0}, Vector3Int{0, -1, 0},
-                     Vector3Int{0, 1, 0}, Vector3Int{0, 0, -1}, Vector3Int{0, 0, 1}}};
+                auto isVisible = [&](const int dx, const int dy, const int dz) -> bool {
+                    const int neighborX = x + dx;
+                    const int neighborY = y + dy;
+                    const int neighborZ = z + dz;
 
-                bool isVisibleBlock = false;
-                for (const Vector3Int& offset : neighborCubesOffsets) {
-                    const int neighborX = x + static_cast<int>(offset.x);
-                    const int neighborY = y + static_cast<int>(offset.y);
-                    const int neighborZ = z + static_cast<int>(offset.z);
+                    return dataWithSentinel(neighborX, neighborY, neighborZ) ==
+                           BlockType::BLOCK_AIR;
+                };
 
-                    // If the neighboring block is air, we need to render it
-                    if (dataWithSentinel(neighborX, neighborY, neighborZ) == BlockType::BLOCK_AIR) {
-                        isVisibleBlock = true;
-                        break;
-                    }
-                }
+                const bool isVisibleBlock = isVisible(+1, 0, 0) ||  // Positive X
+                                            isVisible(-1, 0, 0) ||  // Negative X
+                                            isVisible(0, +1, 0) ||  // Positive Y
+                                            isVisible(0, -1, 0) ||  // Negative Y
+                                            isVisible(0, 0, +1) ||  // Positive Z
+                                            isVisible(0, 0, -1);    // Negative Z
 
                 if (!isVisibleBlock) {
                     continue;
@@ -173,6 +186,11 @@ void Chunk::generateTransforms(const Chunk* positiveXNeighbor, const Chunk* nega
                 }
             }
         }
+    }
+
+    if (adjacentChunkPositiveX && adjacentChunkNegativeX && adjacentChunkPositiveY &&
+        adjacentChunkNegativeY && adjacentChunkPositiveZ && adjacentChunkNegativeZ) {
+        areTransformsFullyGenerated_ = true;
     }
 }
 

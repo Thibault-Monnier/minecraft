@@ -63,7 +63,7 @@ void Game::draw() const {
 
     // const auto startTime = static_cast<float>(GetTime());
     for (const auto& chunk : world_ | std::views::values) {
-        if (isPositionInRenderDistance(chunk.getCenterPosition())) chunk.render();
+        if (isPositionInRenderDistance(chunk->getCenterPosition())) chunk->render();
     }
     // const auto endTime = static_cast<float>(GetTime());
 
@@ -77,6 +77,100 @@ void Game::draw() const {
 
     // std::cout << "Chunks rendering time: " << (endTime - startTime) * 1000.0f << " ms" <<
     // std::endl;
+}
+
+std::array<OptionalRef<Chunk>, 6> Game::findAdjacentChunks(const Chunk& chunk) const {
+    std::array<OptionalRef<Chunk>, 6> adjacentChunks{};
+    const int x = chunk.getX();
+    const int y = chunk.getY();
+    const int z = chunk.getZ();
+
+    auto addAdjacentChunk = [&](const int dx, const int dy, const int dz, const size_t index) {
+        const auto it = world_.find({x + dx, y + dy, z + dz});
+        adjacentChunks[index] =
+            (it != world_.end()) ? OptionalRef<Chunk>{*it->second} : std::nullopt;
+    };
+    addAdjacentChunk(+1, 0, 0, 0);  // Positive X
+    addAdjacentChunk(-1, 0, 0, 1);  // Negative X
+    addAdjacentChunk(0, +1, 0, 2);  // Positive Y
+    addAdjacentChunk(0, -1, 0, 3);  // Negative Y
+    addAdjacentChunk(0, 0, +1, 4);  // Positive Z
+    addAdjacentChunk(0, 0, -1, 5);  // Negative Z
+
+    return adjacentChunks;
+}
+
+Chunk& Game::generateChunk(const Vector3Int& pos) {
+    const Chunk chunk{
+        pos.x, pos.y, pos.z, cubeMesh_, materialGrass_, materialDirt_, materialStone_,
+    };
+    auto [it, _] = world_.emplace(pos, std::make_unique<Chunk>(chunk));
+    it->second->generate(SEED, MAP_HEIGHT_BLOCKS);
+    return *it->second;
+};
+
+void Game::generateChunkTransforms(Chunk& chunk) const {
+    const auto adjacentChunks = findAdjacentChunks(chunk);
+    chunk.generateTransforms(adjacentChunks[0],   // Positive X
+                             adjacentChunks[1],   // Negative X
+                             adjacentChunks[2],   // Positive Y
+                             adjacentChunks[3],   // Negative Y
+                             adjacentChunks[4],   // Positive Z
+                             adjacentChunks[5]);  // Negative Z
+}
+
+void Game::updateTerrain() {
+    const double startTime = GetTime();
+
+    std::unordered_set<const Chunk*> chunksToUpdateTransforms;
+
+    const auto [playerX, _, playerZ] = player_.getPosition();
+    const auto playerChunkX = static_cast<int>(playerX / Chunk::CHUNK_SIZE);
+    const auto playerChunkZ = static_cast<int>(playerZ / Chunk::CHUNK_SIZE);
+    for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
+        for (int chunkY = 0; chunkY < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; chunkY++) {
+            for (int z = -RENDER_DISTANCE; z < RENDER_DISTANCE; z++) {
+                const int chunkX = playerChunkX + x;
+                const int chunkZ = playerChunkZ + z;
+
+                if (!isPositionInRenderDistance(
+                        Vector3{static_cast<float>(chunkX * Chunk::CHUNK_SIZE) + 0.5f,
+                                static_cast<float>(chunkY * Chunk::CHUNK_SIZE) + 0.5f,
+                                static_cast<float>(chunkZ * Chunk::CHUNK_SIZE) +
+                                    0.5f})) {  // Center of the chunk
+                    continue;
+                }
+
+                const Vector3Int position = {chunkX, chunkY, chunkZ};
+                if (world_.contains(position)) {
+                    continue;
+                }
+
+                Chunk& chunk = generateChunk(position);
+
+                auto adjacentChunks = findAdjacentChunks(chunk);
+                chunksToUpdateTransforms.insert(&chunk);
+                for (const auto& adjacentChunk : adjacentChunks) {
+                    if (adjacentChunk &&
+                        isPositionInRenderDistance(adjacentChunk->get().getCenterPosition())) {
+                        chunksToUpdateTransforms.insert(&adjacentChunk->get());
+                    }
+                }
+            }
+        }
+    }
+
+    std::cout << "Chunks to update transforms: " << chunksToUpdateTransforms.size() << std::endl;
+
+    const double intermediateTime = GetTime();
+    for (const auto* chunk : chunksToUpdateTransforms) {
+        generateChunkTransforms(*const_cast<Chunk*>(chunk));
+    }
+
+    const double endTime = GetTime();
+    std::cout << "Terrain update time: " << (endTime - startTime) * 1000.0f << " ms" << std::endl;
+    std::cout << "Chunk transforms generation time: " << (endTime - intermediateTime) * 1000.0f
+              << " ms" << std::endl;
 }
 
 void Game::init() {
@@ -125,12 +219,6 @@ void Game::init() {
         MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE;
     world_.reserve(static_cast<size_t>(chunksUpperBound));
 
-    auto generateChunk = [&](const Vector3Int& pos) {
-        auto [it, _] = world_.emplace(pos, Chunk(pos.x, pos.y, pos.z, cubeMesh_, materialGrass_,
-                                                 materialDirt_, materialStone_));
-        it->second.generate(SEED, MAP_HEIGHT_BLOCKS);
-    };
-
     // Generate spawn chunks first to know the starting position for accurate render distance
     const double startTime = GetTime();
     for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
@@ -139,55 +227,23 @@ void Game::init() {
 
     // Determine the starting position
     int startY = 0;
-    while (
-        world_.at({0, startY / Chunk::CHUNK_SIZE, 0}).getData()[0][startY % Chunk::CHUNK_SIZE][0] !=
-        BlockType::BLOCK_AIR) {
+    while (world_.at({0, startY / Chunk::CHUNK_SIZE, 0})
+               ->getData()[0][startY % Chunk::CHUNK_SIZE][0] != BlockType::BLOCK_AIR) {
         startY++;
     }
     startY += 2;                                                    // Start above the ground
     player_.setPosition({0.5f, static_cast<float>(startY), 0.5f});  // Middle of the block
 
     // Generate the remaining chunks
-    for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
-        for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
-            for (int z = -RENDER_DISTANCE; z < RENDER_DISTANCE; z++) {
-                if (x == 0 && z == 0) continue;
-
-                if (!isPositionInRenderDistance(
-                        Vector3{static_cast<float>(x * Chunk::CHUNK_SIZE) + 0.5f,
-                                static_cast<float>(y * Chunk::CHUNK_SIZE) + 0.5f,
-                                static_cast<float>(z * Chunk::CHUNK_SIZE) +
-                                    0.5f})) {  // Center of the chunk
-                    continue;
-                }
-
-                generateChunk({x, y, z});
-            }
-        }
-    }
+    updateTerrain();
     const double endTime = GetTime();
     std::cout << "Terrain generation time: " << (endTime - startTime) * 1000.0f << " ms"
               << std::endl;
 
     const double transformStartTime = GetTime();
+    std::cout << "World size: " << world_.size() << std::endl;
     for (auto& chunk : world_ | std::views::values) {
-        const int x = chunk.getX();
-        const int y = chunk.getY();
-        const int z = chunk.getZ();
-
-        auto findNeighbor = [&](const int dx, const int dy, const int dz) -> const Chunk* {
-            const auto it = world_.find(Vector3Int{x + dx, y + dy, z + dz});
-            return (it != world_.end()) ? &it->second : nullptr;
-        };
-
-        const Chunk* posX = findNeighbor(+1, 0, 0);
-        const Chunk* negX = findNeighbor(-1, 0, 0);
-        const Chunk* posY = findNeighbor(0, +1, 0);
-        const Chunk* negY = findNeighbor(0, -1, 0);
-        const Chunk* posZ = findNeighbor(0, 0, +1);
-        const Chunk* negZ = findNeighbor(0, 0, -1);
-
-        chunk.generateTransforms(posX, negX, posY, negY, posZ, negZ);
+        generateChunkTransforms(*chunk);
     }
     const double transformsEndTime = GetTime();
     std::cout << "Block transforms generation time: "
@@ -200,6 +256,8 @@ void Game::init() {
 void Game::run() {
     while (!WindowShouldClose()) {
         player_.update();
+
+        updateTerrain();
 
         draw();
     }

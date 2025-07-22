@@ -17,7 +17,7 @@ class Game {
     void init();
     void run();
 
-    constexpr static int RENDER_DISTANCE = 5;  // Render distance in chunks
+    constexpr static int RENDER_DISTANCE = 15;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 512;
 
    private:
@@ -25,7 +25,7 @@ class Game {
 
     Player player_{};
 
-    absl::flat_hash_map<Vector3Int, Chunk> world_{};
+    absl::flat_hash_map<Vector3Int, std::unique_ptr<Chunk>> world_{};
 
     Shader terrainShader_{};
     Mesh cubeMesh_{};
@@ -33,10 +33,17 @@ class Game {
     Material materialDirt_{};
     Material materialStone_{};
 
-    void draw() const;
-    static void drawSky() ;
-    static void drawCursor() ;
-    static void drawFps() ;
-    static void drawPositionInfo(const Vector3& position) ;
     [[nodiscard]] bool isPositionInRenderDistance(const Vector3& position) const;
+
+    static void drawSky();
+    static void drawCursor();
+    static void drawFps();
+    static void drawPositionInfo(const Vector3& position);
+    void draw() const;
+
+    [[nodiscard]] std::array<OptionalRef<Chunk>, 6> findAdjacentChunks(const Chunk& chunk) const;
+
+    Chunk& generateChunk(const Vector3Int& pos);
+    void generateChunkTransforms(Chunk& chunk) const;
+    void updateTerrain();
 };
