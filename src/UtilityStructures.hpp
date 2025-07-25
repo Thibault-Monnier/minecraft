@@ -8,6 +8,10 @@ struct Vector3Int {
     bool operator==(const Vector3Int& other) const noexcept {
         return x == other.x && y == other.y && z == other.z;
     }
+
+    Vector3Int operator+(const Vector3Int& other) const noexcept {
+        return {x + other.x, y + other.y, z + other.z};
+    }
 };
 
 // template <>

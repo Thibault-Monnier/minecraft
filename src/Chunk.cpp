@@ -6,6 +6,7 @@
 
 #include "Game.hpp"
 #include "Perf.hpp"
+#include "TextureAtlas.hpp"
 #include "raymath.h"
 #include "stb_perlin.h"
 
@@ -87,14 +88,22 @@ void Chunk::generate(const int seed, const int maxHeight) {
             //     startCycles = get_cycles();
             // }
 
-            const int lastY = std::min(realHeight - localToGlobalY(0), CHUNK_SIZE);
+            constexpr int minGenerationHeight =
+                24;  // if the terrain is too low, fill it with water
+
+            const int lastY =
+                std::min(std::max(realHeight, minGenerationHeight) - localToGlobalY(0), CHUNK_SIZE);
             for (int localY = 0; localY < lastY; localY++) {
                 const int globalYToRealHeight = localToGlobalY(localY);
-                if (globalYToRealHeight <= realHeight - 4) {
+                if (globalYToRealHeight < minGenerationHeight) {
+                    data_[x][localY][z] = BlockType::BLOCK_WATER;
+                } else if (globalYToRealHeight < minGenerationHeight + 2) {
+                    data_[x][localY][z] = BlockType::BLOCK_SAND;
+                } else if (globalYToRealHeight <= realHeight - 4) {
                     data_[x][localY][z] = BlockType::BLOCK_STONE;
                 } else if (globalYToRealHeight <= realHeight - 2) {
                     data_[x][localY][z] = BlockType::BLOCK_DIRT;
-                } else {
+                } else if (globalYToRealHeight < realHeight) {
                     data_[x][localY][z] = BlockType::BLOCK_GRASS;
                 }
             }
@@ -105,7 +114,6 @@ void Chunk::generate(const int seed, const int maxHeight) {
         }
     }
 }
-
 void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
                                const OptionalRef<Chunk> adjacentChunkNegativeX,
                                const OptionalRef<Chunk> adjacentChunkPositiveY,
@@ -116,9 +124,8 @@ void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
         return;
     }
 
-    stoneTransforms.clear();
-    dirtTransforms.clear();
-    grassTransforms.clear();
+    meshVerts_.clear(), meshNorms_.clear(), meshUVs_.clear(), meshIndices_.clear();
+    chunkMesh_ = {};
 
     auto dataWithSentinel = [&](const int x, const int y, const int z) -> BlockType {
         if (x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
@@ -142,51 +149,139 @@ void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
         return BlockType::BLOCK_STONE;  // Solid block to avoid rendering
     };
 
+    constexpr Rectangle textureRectGrass{0, 0, TEXTURE_SIZE, TEXTURE_SIZE};
+    constexpr Rectangle textureRectDirt{TEXTURE_SIZE, 0, TEXTURE_SIZE, TEXTURE_SIZE};
+    constexpr Rectangle textureRectStone{TEXTURE_SIZE * 2, 0, TEXTURE_SIZE, TEXTURE_SIZE};
+    constexpr Rectangle textureRectSand{TEXTURE_SIZE * 3, 0, TEXTURE_SIZE, TEXTURE_SIZE};
+    constexpr Rectangle textureRectWater{TEXTURE_SIZE * 4, 0, TEXTURE_SIZE, TEXTURE_SIZE};
+
+    struct Vertex {
+        Vector3Int position;
+        Vector3Int normal;
+        Vector2 textureCoord;
+    };
+
+    std::vector<Vertex> vertices;
+
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_SIZE; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
                 if (data_[x][y][z] == BlockType::BLOCK_AIR) {
-                    continue;  // Skip air blocks
-                }
-
-                auto isVisible = [&](const int dx, const int dy, const int dz) -> bool {
-                    const int neighborX = x + dx;
-                    const int neighborY = y + dy;
-                    const int neighborZ = z + dz;
-
-                    return dataWithSentinel(neighborX, neighborY, neighborZ) ==
-                           BlockType::BLOCK_AIR;
-                };
-
-                const bool isVisibleBlock = isVisible(+1, 0, 0) ||  // Positive X
-                                            isVisible(-1, 0, 0) ||  // Negative X
-                                            isVisible(0, +1, 0) ||  // Positive Y
-                                            isVisible(0, -1, 0) ||  // Negative Y
-                                            isVisible(0, 0, +1) ||  // Positive Z
-                                            isVisible(0, 0, -1);    // Negative Z
-
-                if (!isVisibleBlock) {
                     continue;
                 }
 
-                Matrix model = MatrixTranslate(static_cast<float>(localToGlobalX(x)) + 0.5f,
-                                               static_cast<float>(localToGlobalY(y)) + 0.5f,
-                                               static_cast<float>(localToGlobalZ(z)) + 0.5f);
+                auto appendQuad = [&](const Vector3Int& origin, const Vector3Int& edgeDirU,
+                                      const Vector3Int& edgeDirV, const Vector3Int& faceNormal,
+                                      const Rectangle& textureRect) {
+                    const int startIndex = static_cast<int>(vertices.size());
 
-                if (data_[x][y][z] == BlockType::BLOCK_GRASS) {
-                    grassTransforms.push_back(model);
-                } else if (data_[x][y][z] == BlockType::BLOCK_DIRT) {
-                    dirtTransforms.push_back(model);
-                } else if (data_[x][y][z] == BlockType::BLOCK_STONE) {
-                    stoneTransforms.push_back(model);
-                } else {
+                    const float u0 = textureRect.x / static_cast<float>(textureAtlas().width);
+                    const float v0 = textureRect.y / static_cast<float>(textureAtlas().height);
+                    const float u1 = (textureRect.x + textureRect.width) /
+                                     static_cast<float>(textureAtlas().width);
+                    const float v1 = (textureRect.y + textureRect.height) /
+                                     static_cast<float>(textureAtlas().height);
+
+                    const Vector2 textureCoordBL{u0, v0};
+                    const Vector2 textureCoordBR{u1, v0};
+                    const Vector2 textureCoordTR{u1, v1};
+                    const Vector2 textureCoordTL{u0, v1};
+
+                    vertices.push_back({origin, faceNormal, textureCoordBL});
+                    vertices.push_back({origin + edgeDirU, faceNormal, textureCoordBR});
+                    vertices.push_back({origin + edgeDirU + edgeDirV, faceNormal, textureCoordTR});
+                    vertices.push_back({origin + edgeDirV, faceNormal, textureCoordTL});
+
+                    meshIndices_.insert(
+                        meshIndices_.end(),
+                        {static_cast<uint16_t>(startIndex), static_cast<uint16_t>(startIndex + 1),
+                         static_cast<uint16_t>(startIndex + 2), static_cast<uint16_t>(startIndex),
+                         static_cast<uint16_t>(startIndex + 2),
+                         static_cast<uint16_t>(startIndex + 3)});
+                };
+
+                struct Face {
+                    Vector3Int neighbourOffset;
+                    Vector3Int originOffset;  // corner where u=0,v=0
+                    Vector3Int u, v;          // edge vectors
+                    Vector3Int normal;
+                };
+
+                auto isVisible = [&](const Vector3Int& neighbourOffset) -> bool {
+                    return dataWithSentinel(x + neighbourOffset.x, y + neighbourOffset.y,
+                                            z + neighbourOffset.z) == BlockType::BLOCK_AIR;
+                };
+
+                Rectangle textureRect;
+                const BlockType blockType = data_[x][y][z];
+                if (blockType == BlockType::BLOCK_GRASS)
+                    textureRect = textureRectGrass;
+                else if (blockType == BlockType::BLOCK_DIRT)
+                    textureRect = textureRectDirt;
+                else if (blockType == BlockType::BLOCK_STONE)
+                    textureRect = textureRectStone;
+                else if (blockType == BlockType::BLOCK_SAND)
+                    textureRect = textureRectSand;
+                else if (blockType == BlockType::BLOCK_WATER)
+                    textureRect = textureRectWater;
+                else {
                     throw std::runtime_error(
-                        std::format("Unknown block type at ({}, {}, {}): got {}", x, y, z,
-                                    static_cast<int>(data_[x][y][z])));
+                        "Unknown block type encountered during mesh generation.");
+                }
+
+                static constexpr Face faces[6] = {
+                    // +X (east)
+                    {{1, 0, 0}, {1, 0, 1}, {0, 0, -1}, {0, 1, 0}, {1, 0, 0}},
+                    // -X (west)
+                    {{-1, 0, 0}, {0, 0, 0}, {0, 0, 1}, {0, 1, 0}, {-1, 0, 0}},
+
+                    // +Y (top)
+                    {{0, 1, 0}, {1, 1, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 1, 0}},
+                    // -Y (bottom)
+                    {{0, -1, 0}, {0, 0, 0}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0}},
+
+                    // +Z (back)
+                    {{0, 0, 1}, {0, 0, 1}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+                    // -Z (front)
+                    {{0, 0, -1}, {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+                };
+
+                for (const auto& face : faces) {
+                    if (isVisible(face.neighbourOffset)) {
+                        const Vector3Int origin = {x + face.originOffset.x, y + face.originOffset.y,
+                                                   z + face.originOffset.z};
+                        appendQuad(origin, face.u, face.v, face.normal, textureRect);
+                    }
                 }
             }
         }
     }
+
+    meshVerts_.reserve(vertices.size() * 3);
+    meshNorms_.reserve(vertices.size() * 3);
+    meshUVs_.reserve(vertices.size() * 2);
+
+    for (const auto& vertice : vertices) {
+        meshVerts_.push_back(static_cast<float>(vertice.position.x));
+        meshVerts_.push_back(static_cast<float>(vertice.position.y));
+        meshVerts_.push_back(static_cast<float>(vertice.position.z));
+
+        meshNorms_.push_back(static_cast<float>(vertice.normal.x));
+        meshNorms_.push_back(static_cast<float>(vertice.normal.y));
+        meshNorms_.push_back(static_cast<float>(vertice.normal.z));
+
+        meshUVs_.push_back(vertice.textureCoord.x);
+        meshUVs_.push_back(vertice.textureCoord.y);
+    }
+
+    chunkMesh_.vertexCount = static_cast<int>(vertices.size());
+    chunkMesh_.triangleCount = static_cast<int>(meshIndices_.size()) / 3;
+    chunkMesh_.vertices = meshVerts_.data();
+    chunkMesh_.normals = meshNorms_.data();
+    chunkMesh_.texcoords = meshUVs_.data();
+    chunkMesh_.indices = meshIndices_.data();
+
+    UploadMesh(&chunkMesh_, false);
 
     if (adjacentChunkPositiveX && adjacentChunkNegativeX && adjacentChunkPositiveY &&
         adjacentChunkNegativeY && adjacentChunkPositiveZ && adjacentChunkNegativeZ) {
@@ -195,13 +290,10 @@ void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
 }
 
 void Chunk::render() const {
-    if (!grassTransforms.empty())
-        DrawMeshInstanced(cubeMesh_, materialGrass_, grassTransforms.data(),
-                          static_cast<int>(grassTransforms.size()));
-    if (!dirtTransforms.empty())
-        DrawMeshInstanced(cubeMesh_, materialDirt_, dirtTransforms.data(),
-                          static_cast<int>(dirtTransforms.size()));
-    if (!stoneTransforms.empty())
-        DrawMeshInstanced(cubeMesh_, materialStone_, stoneTransforms.data(),
-                          static_cast<int>(stoneTransforms.size()));
+    if (meshIndices_.empty()) return;
+
+    const Matrix pos = MatrixTranslate(static_cast<float>(localToGlobalX(0)),
+                                       static_cast<float>(localToGlobalY(0)),
+                                       static_cast<float>(localToGlobalZ(0)));
+    DrawMesh(chunkMesh_, materialAtlas_, pos);
 }

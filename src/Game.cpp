@@ -6,6 +6,7 @@
 
 #define RLIGHTS_IMPLEMENTATION
 #include "Perf.hpp"
+#include "TextureAtlas.hpp"
 #include "UtilityStructures.hpp"
 #include "raylib.h"
 #include "raymath.h"
@@ -101,9 +102,7 @@ std::array<OptionalRef<Chunk>, 6> Game::findAdjacentChunks(const Chunk& chunk) c
 }
 
 Chunk& Game::generateChunk(const Vector3Int& pos) {
-    const Chunk chunk{
-        pos.x, pos.y, pos.z, cubeMesh_, materialGrass_, materialDirt_, materialStone_,
-    };
+    const Chunk chunk{pos.x, pos.y, pos.z, materialAtlas_};
     auto [it, _] = world_.emplace(pos, std::make_unique<Chunk>(chunk));
     it->second->generate(SEED, MAP_HEIGHT_BLOCKS);
     return *it->second;
@@ -177,42 +176,24 @@ void Game::init() {
     DisableCursor();
     SetTargetFPS(0);  // Set to maximum FPS
 
-    terrainShader_ = LoadShader(
-        std::format("{}/resources/shaders/lighting_instancing.vs", CMAKE_ROOT_DIR).c_str(),
-        std::format("{}/resources/shaders/lighting.fs", CMAKE_ROOT_DIR).c_str());
+    terrainShader_ =
+        LoadShader(std::format("{}/resources/shaders/lighting.vs", CMAKE_ROOT_DIR).c_str(),
+                   std::format("{}/resources/shaders/lighting.fs", CMAKE_ROOT_DIR).c_str());
 
-    float ambient[4] = {10.0f, 10.0f, 10.0f, 1.0f};
-    int ambLoc = GetShaderLocation(terrainShader_, "ambient");
+    constexpr float ambient[4] = {10.0f, 10.0f, 10.0f, 1.0f};
+    const int ambLoc = GetShaderLocation(terrainShader_, "ambient");
     SetShaderValue(terrainShader_, ambLoc, ambient, SHADER_UNIFORM_VEC4);
 
     constexpr Vector3 lightPos = {5000.0f, 15000.0f, 7500.0f};
-    constexpr Color lightColor = {200, 200, 200, 255};
+    constexpr Color lightColor = {170, 170, 170, 255};
     UpdateLightValues(terrainShader_, CreateLight(LIGHT_DIRECTIONAL, lightPos, Vector3Zero(),
                                                   lightColor, terrainShader_));
 
-    cubeMesh_ = GenMeshCube(1.0f, 1.0f, 1.0f);
-    UploadMesh(&cubeMesh_, false);
-
-    const Texture2D grassTexture =
-        LoadTexture(std::format("{}/resources/textures/grass.png", CMAKE_ROOT_DIR).c_str());
-    materialGrass_ = LoadMaterialDefault();
-    materialGrass_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    materialGrass_.maps[MATERIAL_MAP_DIFFUSE].texture = grassTexture;
-    materialGrass_.shader = terrainShader_;
-
-    const Texture2D dirtTexture =
-        LoadTexture(std::format("{}/resources/textures/dirt.png", CMAKE_ROOT_DIR).c_str());
-    materialDirt_ = LoadMaterialDefault();
-    materialDirt_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    materialDirt_.maps[MATERIAL_MAP_DIFFUSE].texture = dirtTexture;  // Using the same texture
-    materialDirt_.shader = terrainShader_;
-
-    const Texture2D stoneTexture =
-        LoadTexture(std::format("{}/resources/textures/stone.png", CMAKE_ROOT_DIR).c_str());
-    materialStone_ = LoadMaterialDefault();
-    materialStone_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    materialStone_.maps[MATERIAL_MAP_DIFFUSE].texture = stoneTexture;
-    materialStone_.shader = terrainShader_;
+    const Texture2D textureAtlas = LoadTexture(TEXTURE_ATLAS_PATH.c_str());
+    materialAtlas_ = LoadMaterialDefault();
+    materialAtlas_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    materialAtlas_.maps[MATERIAL_MAP_DIFFUSE].texture = textureAtlas;
+    materialAtlas_.shader = terrainShader_;
 
     constexpr double chunksUpperBound =
         static_cast<float>((RENDER_DISTANCE + M_SQRT1_2) * (RENDER_DISTANCE + M_SQRT1_2)) * M_PI *
@@ -236,21 +217,6 @@ void Game::init() {
 
     // Generate the remaining chunks
     updateTerrain();
-    const double endTime = GetTime();
-    std::cout << "Terrain generation time: " << (endTime - startTime) * 1000.0f << " ms"
-              << std::endl;
-
-    const double transformStartTime = GetTime();
-    std::cout << "World size: " << world_.size() << std::endl;
-    for (auto& chunk : world_ | std::views::values) {
-        generateChunkTransforms(*chunk);
-    }
-    const double transformsEndTime = GetTime();
-    std::cout << "Block transforms generation time: "
-              << (transformsEndTime - transformStartTime) * 1000.0f << " ms" << std::endl;
-
-    std::cout << "Generated " << world_.size() << " chunks in "
-              << (transformsEndTime - startTime) * 1000.0f << " ms" << std::endl;
 }
 
 void Game::run() {

@@ -7,22 +7,16 @@
 #include "UtilityTypes.hpp"
 #include "raylib.h"
 
-enum class BlockType : uint8_t { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE };
+enum class BlockType : uint8_t { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE, BLOCK_SAND, BLOCK_WATER };
 
 class Chunk {
    public:
     static constexpr int CHUNK_SIZE = 32;
 
-    Chunk(const int x, const int y, const int z, const Mesh& cubeMesh,
-          const Material& materialGrass, const Material& materialDirt,
-          const Material& materialStone)
-        : chunkX_(x),
-          chunkY_(y),
-          chunkZ_(z),
-          cubeMesh_(cubeMesh),
-          materialGrass_(materialGrass),
-          materialDirt_(materialDirt),
-          materialStone_(materialStone) {}
+    Chunk(const int x, const int y, const int z, const Material& materialAtlas)
+        : chunkX_(x), chunkY_(y), chunkZ_(z), materialAtlas_(materialAtlas) {}
+
+    ~Chunk() { UnloadMesh(chunkMesh_); }
 
     [[nodiscard]] int getX() const { return chunkX_; }
     [[nodiscard]] int getY() const { return chunkY_; }
@@ -55,14 +49,12 @@ class Chunk {
     const int chunkY_;
     const int chunkZ_;
 
-    const Mesh& cubeMesh_;
-    const Material& materialGrass_;
-    const Material& materialDirt_;
-    const Material& materialStone_;
+    const Material& materialAtlas_{};
 
-    std::vector<Matrix> grassTransforms;
-    std::vector<Matrix> dirtTransforms;
-    std::vector<Matrix> stoneTransforms;
+    std::vector<float> meshVerts_, meshNorms_, meshUVs_;
+    std::vector<uint16_t> meshIndices_;
+
+    Mesh chunkMesh_{};
 
     bool areTransformsFullyGenerated_ = false;
 
@@ -73,4 +65,8 @@ class Chunk {
     [[nodiscard]] int localToGlobalZ(const int z) const { return chunkZ_ * CHUNK_SIZE + z; }
 
     [[nodiscard]] int globalToLocalY(const int y) const { return y - chunkY_ * CHUNK_SIZE; }
+
+    [[nodiscard]] Texture2D textureAtlas() const {
+        return materialAtlas_.maps[MATERIAL_MAP_DIFFUSE].texture;
+    }
 };

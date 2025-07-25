@@ -9,15 +9,12 @@
 class Game {
    public:
     Game() = default;
-    ~Game() {
-        UnloadShader(terrainShader_);
-        UnloadMesh(cubeMesh_);
-    }
+    ~Game() { UnloadMaterial(materialAtlas_); }
 
     void init();
     void run();
 
-    constexpr static int RENDER_DISTANCE = 15;  // Render distance in chunks
+    constexpr static int RENDER_DISTANCE = 25;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 512;
 
    private:
@@ -28,10 +25,7 @@ class Game {
     absl::flat_hash_map<Vector3Int, std::unique_ptr<Chunk>> world_{};
 
     Shader terrainShader_{};
-    Mesh cubeMesh_{};
-    Material materialGrass_{};
-    Material materialDirt_{};
-    Material materialStone_{};
+    Material materialAtlas_{};
 
     [[nodiscard]] bool isPositionInRenderDistance(const Vector3& position) const;
 
