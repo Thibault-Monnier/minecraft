@@ -4,10 +4,9 @@
 #include <cstdint>
 #include <vector>
 
-#include "UtilityTypes.hpp"
+#include "block/Block.hpp"
+#include "common/UtilityTypes.hpp"
 #include "raylib.h"
-
-enum class BlockType : uint8_t { BLOCK_AIR, BLOCK_GRASS, BLOCK_DIRT, BLOCK_STONE, BLOCK_SAND, BLOCK_WATER };
 
 class Chunk {
    public:
@@ -39,8 +38,7 @@ class Chunk {
 
     void render() const;
 
-    typedef std::array<std::array<std::array<BlockType, CHUNK_SIZE>, CHUNK_SIZE>, CHUNK_SIZE>
-        ChunkData;
+    typedef std::array<std::array<std::array<Block, CHUNK_SIZE>, CHUNK_SIZE>, CHUNK_SIZE> ChunkData;
 
     [[nodiscard]] const ChunkData& getData() const { return data_; }
 
@@ -66,7 +64,7 @@ class Chunk {
 
     [[nodiscard]] int globalToLocalY(const int y) const { return y - chunkY_ * CHUNK_SIZE; }
 
-    [[nodiscard]] Texture2D textureAtlas() const {
+    [[nodiscard]] Texture2D& textureAtlas() const {
         return materialAtlas_.maps[MATERIAL_MAP_DIFFUSE].texture;
     }
 };

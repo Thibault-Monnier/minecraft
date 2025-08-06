@@ -6,7 +6,7 @@ void runMenu() {
     const int halfScreenWidth = GetScreenWidth() / 2;
     const int halfScreenHeight = GetScreenHeight() / 2;
 
-    const char* title = "Welcome to the Minecraft Clone!";
+    const char* title = "Welcome!";
     const char* subtitle = "Press ENTER to launch the game";
 
     const int titleFontSize = 60;

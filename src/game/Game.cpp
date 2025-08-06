@@ -5,9 +5,8 @@
 #include <ranges>
 
 #define RLIGHTS_IMPLEMENTATION
-#include "Perf.hpp"
 #include "TextureAtlas.hpp"
-#include "UtilityStructures.hpp"
+#include "common/UtilityStructures.hpp"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlights.h"
@@ -209,7 +208,8 @@ void Game::init() {
     // Determine the starting position
     int startY = 0;
     while (world_.at({0, startY / Chunk::CHUNK_SIZE, 0})
-               ->getData()[0][startY % Chunk::CHUNK_SIZE][0] != BlockType::BLOCK_AIR) {
+               ->getData()[0][startY % Chunk::CHUNK_SIZE][0]
+               .type() != BlockType::BLOCK_AIR) {
         startY++;
     }
     startY += 2;                                                    // Start above the ground

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 struct Vector3Int {
     int x;
     int y;
@@ -11,6 +13,19 @@ struct Vector3Int {
 
     Vector3Int operator+(const Vector3Int& other) const noexcept {
         return {x + other.x, y + other.y, z + other.z};
+    }
+};
+
+struct Vector2Int {
+    int x;
+    int y;
+
+    bool operator==(const Vector2Int& other) const noexcept {
+        return x == other.x && y == other.y;
+    }
+
+    Vector2Int operator+(const Vector2Int& other) const noexcept {
+        return {x + other.x, y + other.y};
     }
 };
 
