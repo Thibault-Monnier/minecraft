@@ -32,6 +32,11 @@ uniform Light lights[MAX_LIGHTS];
 uniform vec4 ambient;
 uniform vec3 viewPos;
 
+// Fog
+uniform vec3 fogColor;
+uniform float fogStart;
+uniform float fogEnd;
+
 void main()
 {
     // Texel color fetching from texture sampler
@@ -72,6 +77,19 @@ void main()
 
     finalColor = (texelColor*((tint + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
     finalColor += texelColor*(ambient/10.0)*tint;
+
+    // ---------- FOG ----------
+    float dist = distance(viewPos, fragPosition);
+
+    // ---- Linear ----
+    float fogFactor = clamp((fogEnd - dist) / (fogEnd - fogStart), 0.0, 1.0);
+    // ---- Exponential (comment linear if you use this) ----
+    // float fogFactor = exp(-pow(dist * fogDensity, 2.0));   // exp²
+    // -------------------------------------------
+
+    vec3 fogged = mix(fogColor, finalColor.rgb, fogFactor);
+
+    finalColor = vec4(fogged, finalColor.a);
 
     // Gamma correction
     // NOTE: This line makes the color much less saturated

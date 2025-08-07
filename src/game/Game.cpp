@@ -14,7 +14,9 @@
 bool Game::isPositionInRenderDistance(const Vector3& position) const {
     constexpr float maxDistanceSq =
         RENDER_DISTANCE * RENDER_DISTANCE * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
-    return Vector3DistanceSqr(position, player_.getPosition()) < maxDistanceSq;
+    return (position.x - player_.getPosition().x) * (position.x - player_.getPosition().x) +
+               (position.z - player_.getPosition().z) * (position.z - player_.getPosition().z) <
+           maxDistanceSq;
 }
 
 void Game::drawSky() {
@@ -179,7 +181,7 @@ void Game::init() {
         LoadShader(std::format("{}/resources/shaders/lighting.vs", CMAKE_ROOT_DIR).c_str(),
                    std::format("{}/resources/shaders/lighting.fs", CMAKE_ROOT_DIR).c_str());
 
-    constexpr float ambient[4] = {10.0f, 10.0f, 10.0f, 1.0f};
+    constexpr float ambient[4] = {7.0f, 7.0f, 7.0f, 1.0f};
     const int ambLoc = GetShaderLocation(terrainShader_, "ambient");
     SetShaderValue(terrainShader_, ambLoc, ambient, SHADER_UNIFORM_VEC4);
 
@@ -187,6 +189,19 @@ void Game::init() {
     constexpr Color lightColor = {170, 170, 170, 255};
     UpdateLightValues(terrainShader_, CreateLight(LIGHT_DIRECTIONAL, lightPos, Vector3Zero(),
                                                   lightColor, terrainShader_));
+
+    constexpr Vector3 fogColor = {0.65f, 0.76f, 0.92f};                    // soft sky-blue
+    constexpr float fogStart = (RENDER_DISTANCE - 2) * Chunk::CHUNK_SIZE;  // start fading
+    constexpr float fogEnd = RENDER_DISTANCE * Chunk::CHUNK_SIZE;          // completely hidden
+
+    const int locFogColor = GetShaderLocation(terrainShader_, "fogColor");
+    const int locFogStart = GetShaderLocation(terrainShader_, "fogStart");
+    const int locFogEnd = GetShaderLocation(terrainShader_, "fogEnd");
+    terrainShader_.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(terrainShader_, "viewPos");
+
+    SetShaderValue(terrainShader_, locFogColor, &fogColor, SHADER_UNIFORM_VEC3);
+    SetShaderValue(terrainShader_, locFogStart, &fogStart, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(terrainShader_, locFogEnd, &fogEnd, SHADER_UNIFORM_FLOAT);
 
     const Texture2D textureAtlas = LoadTexture(TEXTURE_ATLAS_PATH.c_str());
     materialAtlas_ = LoadMaterialDefault();
