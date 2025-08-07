@@ -9,7 +9,6 @@ void Block::generateBlockMesh(const Vector3Int& position, std::vector<Vertex>& c
     if (!isRendered()) return;
 
     struct Face {
-        Vector3Int neighbourOffset;
         Vector3Int originOffset;  // corner where u=0,v=0
         Vector3Int u, v;          // edge vectors
         Vector3Int normal;
@@ -17,19 +16,19 @@ void Block::generateBlockMesh(const Vector3Int& position, std::vector<Vertex>& c
 
     static constexpr Face faces[6] = {
         // +X (east)
-        {{1, 0, 0}, {1, 0, 1}, {0, 0, -1}, {0, 1, 0}, {1, 0, 0}},
+        {{1, 1, 0}, {0, 0, 1}, {0, -1, 0}, {1, 0, 0}},
         // -X (west)
-        {{-1, 0, 0}, {0, 0, 0}, {0, 0, 1}, {0, 1, 0}, {-1, 0, 0}},
+        {{0, 1, 1}, {0, 0, -1}, {0, -1, 0}, {-1, 0, 0}},
 
         // +Y (top)
-        {{0, 1, 0}, {1, 1, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 1, 0}},
+        {{0, 1, 0}, {0, 0, 1}, {1, 0, 0}, {0, 1, 0}},
         // -Y (bottom)
-        {{0, -1, 0}, {0, 0, 0}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0}},
+        {{0, 0, 0}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0}},
 
         // +Z (back)
-        {{0, 0, 1}, {0, 0, 1}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+        {{1, 1, 1}, {-1, 0, 0}, {0, -1, 0}, {0, 0, 1}},
         // -Z (front)
-        {{0, 0, -1}, {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+        {{0, 1, 0}, {1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
     };
 
     auto appendQuad = [&](const Vector3Int& origin, const Vector3Int& edgeDirU,
