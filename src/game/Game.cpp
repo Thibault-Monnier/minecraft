@@ -190,7 +190,7 @@ void Game::init() {
     UpdateLightValues(terrainShader_, CreateLight(LIGHT_DIRECTIONAL, lightPos, Vector3Zero(),
                                                   lightColor, terrainShader_));
 
-    constexpr Vector3 fogColor = {0.65f, 0.76f, 0.92f};                    // soft sky-blue
+    constexpr Vector3 fogColor = {0.65f, 0.76f, 0.92f};
     constexpr float fogStart = (RENDER_DISTANCE - 2) * Chunk::CHUNK_SIZE;  // start fading
     constexpr float fogEnd = RENDER_DISTANCE * Chunk::CHUNK_SIZE;          // completely hidden
 
