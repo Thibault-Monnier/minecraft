@@ -2,12 +2,10 @@
 
 #include <cmath>
 #include <format>
-#include <stdexcept>
 
 #include "Game.hpp"
-#include "TextureAtlas.hpp"
+#include "PerlinNoise.h"
 #include "raymath.h"
-#include "stb_perlin.h"
 
 float fBm(const float x, const float z, const int octaves, const float lacunarity, const float gain,
           const int seed) {

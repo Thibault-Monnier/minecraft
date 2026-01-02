@@ -27,21 +27,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-        -Wall -Wextra -Wshadow
-)
+target_compile_definitions(${PROJECT_NAME} PRIVATE CMAKE_ROOT_DIR="${CMAKE_SOURCE_DIR}")
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-        CMAKE_ROOT_DIR="${CMAKE_SOURCE_DIR}"
-)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wshadow)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(SAN_FLAGS "-fsanitize=address,undefined,leak,signed-integer-overflow -fno-omit-frame-pointer -O0 -g")
@@ -79,20 +74,10 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
         ${abseil-cpp_SOURCE_DIR}/absl
 )
 
-# === stb_perlin setup ===
-add_library(stb_perlin STATIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb/stb_perlin_wrapper.cpp
-)
-target_compile_definitions(stb_perlin PRIVATE STB_PERLIN_IMPLEMENTATION)
-target_include_directories(stb_perlin PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
-)
-
 target_link_libraries(${PROJECT_NAME}
         PRIVATE raylib
         PRIVATE absl::base
         PRIVATE absl::flat_hash_map
         PRIVATE absl::hash
-        PRIVATE stb_perlin
         PRIVATE m pthread dl
 )
