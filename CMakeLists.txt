@@ -60,6 +60,11 @@ endif ()
 add_subdirectory(third_party/raylib)
 get_target_property(RAYLIB_INCLUDES raylib INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(raylib SYSTEM INTERFACE ${RAYLIB_INCLUDES})
+target_compile_options(raylib PRIVATE
+        $<$<C_COMPILER_ID:Clang>:-w>
+        $<$<C_COMPILER_ID:GNU>:-w>
+        $<$<C_COMPILER_ID:MSVC>:/w>
+)
 
 # === abseil setup ===
 add_subdirectory(third_party/abseil-cpp)
