@@ -32,7 +32,12 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders
+)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE CMAKE_ROOT_DIR="${CMAKE_SOURCE_DIR}")
 
@@ -52,27 +57,12 @@ else ()
 endif ()
 
 # === raylib setup ===
-FetchContent_Declare(
-        raylib
-        GIT_REPOSITORY https://github.com/raysan5/raylib.git
-        GIT_TAG master
-)
-FetchContent_MakeAvailable(raylib)
-target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
-        ${raylib_SOURCE_DIR}/src
-        resources/shaders
-)
+add_subdirectory(third_party/raylib)
+get_target_property(RAYLIB_INCLUDES raylib INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(raylib SYSTEM INTERFACE ${RAYLIB_INCLUDES})
 
 # === abseil setup ===
-FetchContent_Declare(
-        abseil-cpp
-        GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-        GIT_TAG 20250512.1
-)
-FetchContent_MakeAvailable(abseil-cpp)
-target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
-        ${abseil-cpp_SOURCE_DIR}/absl
-)
+add_subdirectory(third_party/abseil-cpp)
 
 target_link_libraries(${PROJECT_NAME}
         PRIVATE raylib
