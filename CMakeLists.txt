@@ -30,18 +30,19 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 
-add_executable(${PROJECT_NAME} ${SRC_FILES})
+add_executable(minecraft ${SRC_FILES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(minecraft PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+target_include_directories(minecraft SYSTEM PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE CMAKE_ROOT_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(minecraft PRIVATE CMAKE_ROOT_DIR="${CMAKE_SOURCE_DIR}")
 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wshadow)
+target_compile_options(minecraft PRIVATE -Wall -Wextra -Wshadow)
+target_link_options(minecraft PRIVATE -fuse-ld=lld)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(SAN_FLAGS "-fsanitize=address,undefined,leak,signed-integer-overflow -fno-omit-frame-pointer -O0 -g")
@@ -52,7 +53,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -fsanitize=address,undefined,leak")
 
 else ()
-    target_compile_options(${PROJECT_NAME} PRIVATE -O3)
+    target_compile_options(minecraft PRIVATE -O3 -flto -ffast-math)
+    target_link_options(minecraft PRIVATE -flto)
 
 endif ()
 
@@ -69,7 +71,7 @@ target_compile_options(raylib PRIVATE
 # === abseil setup ===
 add_subdirectory(third_party/abseil-cpp)
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(minecraft
         PRIVATE raylib
         PRIVATE absl::base
         PRIVATE absl::flat_hash_map
