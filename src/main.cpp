@@ -3,8 +3,8 @@
 #include "raylib.h"
 
 int main() {
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED);
-    InitWindow(0, 0, "Minecraft Clone");
+    InitWindow(720, 480, "Minecraft Clone");
+    if (!IsWindowFullscreen()) ToggleFullscreen();
 
     SetTargetFPS(60);
 
