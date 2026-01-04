@@ -111,6 +111,7 @@ void Chunk::generate(const int seed, const int maxHeight) {
         }
     }
 }
+
 void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
                                const OptionalRef<Chunk> adjacentChunkNegativeX,
                                const OptionalRef<Chunk> adjacentChunkPositiveY,

@@ -103,8 +103,8 @@ std::array<OptionalRef<Chunk>, 6> Game::findAdjacentChunks(const Chunk& chunk) c
 }
 
 Chunk& Game::generateChunk(const Vector3Int& pos) {
-    const Chunk chunk{pos.x, pos.y, pos.z, materialAtlas_};
-    auto [it, _] = world_.emplace(pos, std::make_unique<Chunk>(chunk));
+    auto [it, _] =
+        world_.emplace(pos, std::make_unique<Chunk>(pos.x, pos.y, pos.z, materialAtlas_));
     it->second->generate(SEED, MAP_HEIGHT_BLOCKS);
     return *it->second;
 };

@@ -15,7 +15,13 @@ class Chunk {
     Chunk(const int x, const int y, const int z, const Material& materialAtlas)
         : chunkX_(x), chunkY_(y), chunkZ_(z), materialAtlas_(materialAtlas) {}
 
-    ~Chunk() { UnloadMesh(chunkMesh_); }
+    Chunk(Chunk&& other) noexcept = delete;
+    Chunk& operator=(Chunk&&) noexcept = delete;
+
+    Chunk(const Chunk& other) = delete;
+    Chunk& operator=(const Chunk&) = delete;
+
+    ~Chunk() = default;
 
     [[nodiscard]] int getX() const { return chunkX_; }
     [[nodiscard]] int getY() const { return chunkY_; }
@@ -52,7 +58,7 @@ class Chunk {
     const int chunkY_;
     const int chunkZ_;
 
-    const Material& materialAtlas_{};
+    const Material& materialAtlas_;
 
     std::vector<float> meshVerts_, meshNorms_, meshUVs_;
     std::vector<uint16_t> meshIndices_;
@@ -61,7 +67,7 @@ class Chunk {
 
     bool areTransformsFullyGenerated_ = false;
 
-    ChunkData data_{};  // 3D array to hold the block types in the chunk
+    ChunkData data_;  // 3D array to hold the block types in the chunk
 
     [[nodiscard]] int localToGlobalX(const int x) const { return chunkX_ * CHUNK_SIZE + x; }
     [[nodiscard]] int localToGlobalY(const int y) const { return chunkY_ * CHUNK_SIZE + y; }
