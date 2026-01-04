@@ -81,11 +81,12 @@ void main()
     // ---------- FOG ----------
     float dist = distance(viewPos, fragPosition);
 
-    // ---- Linear ----
-    float fogFactor = clamp((fogEnd - dist) / (fogEnd - fogStart), 0.0, 1.0);
-    // ---- Exponential (comment linear if you use this) ----
-    // float fogFactor = exp(-pow(dist * fogDensity, 2.0));   // exp²
-    // -------------------------------------------
+    float amplitude = fogEnd - fogStart;
+    float k = log(0.02) / amplitude;
+    float d = max(dist - fogStart, 0.0);
+    float ramp = smoothstep(0.0, 0.5 * amplitude, d);
+    float fogFactor = mix(1.0, exp(k * d), ramp);
+    fogFactor = clamp(fogFactor, 0.0, 1.0);
 
     vec3 fogged = mix(fogColor, finalColor.rgb, fogFactor);
 

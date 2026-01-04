@@ -180,8 +180,8 @@ void Game::updateShader() { materialAtlas_.shader = terrainShader_; }
 
 void Game::updateFog() {
     constexpr Vector3 fogColor = {0.65f, 0.76f, 0.92f};
-    const float fogStart = (renderDistance_ - 2) * Chunk::CHUNK_SIZE;  // start fading
-    const float fogEnd = renderDistance_ * Chunk::CHUNK_SIZE;          // completely hidden
+    const float fogStart = renderDistance_ / 3.0f * Chunk::CHUNK_SIZE;
+    const float fogEnd = renderDistance_ * Chunk::CHUNK_SIZE;
 
     const int locFogColor = GetShaderLocation(terrainShader_, "fogColor");
     const int locFogStart = GetShaderLocation(terrainShader_, "fogStart");
