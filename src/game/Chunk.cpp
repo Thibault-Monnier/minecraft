@@ -4,7 +4,7 @@
 #include <format>
 
 #include "Game.hpp"
-#include "PerlinNoise.h"
+#include "PerlinNoise.hpp"
 #include "raymath.h"
 
 float fBm(const float x, const float y, const int octaves, const float lacunarity, const float gain,
@@ -13,8 +13,7 @@ float fBm(const float x, const float y, const int octaves, const float lacunarit
     float frequency = 1.0f;
     float sum = 0.0f;
     for (int i = 0; i < octaves; i++) {
-        sum += amplitude *
-               stb_perlin_noise3_seed(x * frequency, y * frequency, 0.0f, 0, 0, 0, seed + i);
+        sum += amplitude * stb_perlin_noise2_seed(x * frequency, y * frequency, seed + i);
         amplitude *= gain;
         frequency *= lacunarity;
     }

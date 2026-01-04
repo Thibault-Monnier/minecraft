@@ -15,7 +15,7 @@ class Game {
     void run();
 
    private:
-    constexpr static int DEFAULT_RENDER_DISTANCE = 2;  // Render distance in chunks
+    constexpr static int DEFAULT_RENDER_DISTANCE = 15;  // Render distance in chunks
     constexpr static int MAP_HEIGHT_BLOCKS = 512;
     constexpr static int SEED = 1;  // Seed for noise generation
 
