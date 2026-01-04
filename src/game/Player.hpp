@@ -8,8 +8,7 @@ struct Keybinds {
     int right;
     int jump;
     int crouch;
-    int run;
-    int superRun;
+    int runModeToggle;
     int zoomIn;
 };
 
@@ -59,8 +58,7 @@ class Player {
         .right = KEY_D,
         .jump = KEY_SPACE,
         .crouch = KEY_LEFT_CONTROL,
-        .run = KEY_LEFT_SHIFT,
-        .superRun = KEY_LEFT_ALT,
+        .runModeToggle = KEY_LEFT_SHIFT,
         .zoomIn = KEY_C,
     };
 

@@ -12,7 +12,7 @@ void Player::update() {
 void Player::updatePosition() {
     const float deltaTime = GetFrameTime();
 
-    if (IsKeyPressed(KEY_LEFT_SHIFT)) {
+    if (IsKeyPressed(keybinds_.runModeToggle)) {
         if (movementMode_ == MovementMode::WALKING) {
             movementMode_ = MovementMode::RUNNING;
         } else if (movementMode_ == MovementMode::RUNNING) {
@@ -27,17 +27,18 @@ void Player::updatePosition() {
                                                                            : superRunningSpeed_;
     const float movementDistance = deltaTime * movementSpeed;
 
-    Vector2 movement2DRelative = {static_cast<float>(IsKeyDown(KEY_D) - IsKeyDown(KEY_A)),
-                                  static_cast<float>(IsKeyDown(KEY_W) - IsKeyDown(KEY_S))};
+    Vector2 movement2DRelative = {
+        static_cast<float>(IsKeyDown(keybinds_.right) - IsKeyDown(keybinds_.left)),
+        static_cast<float>(IsKeyDown(keybinds_.forward) - IsKeyDown(keybinds_.backward))};
     movement2DRelative = Vector2Scale(Vector2Normalize(movement2DRelative), movementDistance);
     const Vector2 movement2D = Vector2Rotate(movement2DRelative, cameraYaw_);
     position_.x += movement2D.x;
     position_.y += movement2D.y;
 
     float verticalMovementDirection = 0.0f;
-    if (IsKeyDown(KEY_SPACE))
+    if (IsKeyDown(keybinds_.jump))
         verticalMovementDirection = 1.0f;
-    else if (IsKeyDown(KEY_LEFT_CONTROL))
+    else if (IsKeyDown(keybinds_.crouch))
         verticalMovementDirection = -1.0f;
     position_.z += verticalMovementDirection * movementDistance * verticalSpeedMultiplier_;
 }
@@ -58,5 +59,5 @@ void Player::updateCamera() {
     };
     camera_.target = Vector3Add(camera_.position, direction);
 
-    camera_.fovy = IsKeyDown(KEY_C) ? cameraFovZoom_ : cameraFov_;
+    camera_.fovy = IsKeyDown(keybinds_.zoomIn) ? cameraFovZoom_ : cameraFov_;
 }

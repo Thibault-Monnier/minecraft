@@ -14,11 +14,12 @@ class Game {
     void init();
     void run();
 
-    constexpr static int RENDER_DISTANCE = 25;  // Render distance in chunks
-    constexpr static int MAP_HEIGHT_BLOCKS = 512;
-
    private:
+    constexpr static int DEFAULT_RENDER_DISTANCE = 2;  // Render distance in chunks
+    constexpr static int MAP_HEIGHT_BLOCKS = 512;
     constexpr static int SEED = 1;  // Seed for noise generation
+
+    int renderDistance_ = DEFAULT_RENDER_DISTANCE;
 
     Player player_{};
 
@@ -32,6 +33,7 @@ class Game {
     static void drawSky();
     static void drawCursor();
     static void drawFps();
+    void drawRenderDistance() const;
     static void drawPositionInfo(const Vector3& position);
     void draw() const;
 
@@ -39,5 +41,14 @@ class Game {
 
     Chunk& generateChunk(const Vector3Int& pos);
     void generateChunkTransforms(Chunk& chunk) const;
+
+    /// If needed, updates chunk transforms and generates new chunks within the render distance
+    /// around the player
     void updateTerrain();
+
+    /// Update the shader used in the material atlas to the current terrain shader
+    ///
+    /// Note: chunk transforms must be re-generated separately after changing the shader
+    void updateShader();
+    void updateFog();
 };

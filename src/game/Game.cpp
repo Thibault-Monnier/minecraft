@@ -12,8 +12,8 @@
 #include "rlights.h"
 
 bool Game::isPositionInRenderDistance(const Vector3& position) const {
-    constexpr float maxDistanceSq =
-        RENDER_DISTANCE * RENDER_DISTANCE * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
+    const float maxDistanceSq =
+        renderDistance_ * renderDistance_ * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
     return (position.x - player_.getPosition().x) * (position.x - player_.getPosition().x) +
                (position.y - player_.getPosition().y) * (position.y - player_.getPosition().y) <
            maxDistanceSq;
@@ -41,6 +41,13 @@ void Game::drawFps() {
     const int screenWidth = GetScreenWidth();
     const int screenHeight = GetScreenHeight();
     DrawText(TextFormat("FPS: %i", GetFPS()), screenWidth - 100, screenHeight - 30, 20, BLACK);
+}
+
+void Game::drawRenderDistance() const {
+    DrawRectangle(10, 100, 300, 60, Fade(BLACK, 0.35f));  // Semi-transparent background
+    DrawRectangleLines(10, 100, 300, 60, BLACK);          // Border around the rectangle
+    DrawText(TextFormat("Render Distance: %i chunks", renderDistance_), 20, 110, 20, BLACK);
+    DrawText(TextFormat("Chunks Generated: %zu", world_.size()), 20, 130, 20, BLACK);
 }
 
 void Game::drawPositionInfo(const Vector3& position) {
@@ -73,6 +80,7 @@ void Game::draw() const {
 
     drawCursor();
     drawFps();
+    drawRenderDistance();
     drawPositionInfo(camera_.position);
 
     EndDrawing();
@@ -127,9 +135,9 @@ void Game::updateTerrain() {
     const auto [playerX, playerY, _] = player_.getPosition();
     const auto playerChunkX = static_cast<int>(playerX / Chunk::CHUNK_SIZE);
     const auto playerChunkY = static_cast<int>(playerY / Chunk::CHUNK_SIZE);
-    for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
+    for (int x = -renderDistance_; x < renderDistance_; x++) {
         const int chunkX = playerChunkX + x;
-        for (int y = -RENDER_DISTANCE; y < RENDER_DISTANCE; y++) {
+        for (int y = -renderDistance_; y < renderDistance_; y++) {
             const int chunkY = playerChunkY + y;
             for (int chunkZ = 0; chunkZ < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; chunkZ++) {
                 if (!isPositionInRenderDistance(Chunk::getCenterPosition(chunkX, chunkY, chunkY))) {
@@ -168,6 +176,25 @@ void Game::updateTerrain() {
               << " ms" << std::endl;
 }
 
+void Game::updateShader() { materialAtlas_.shader = terrainShader_; }
+
+void Game::updateFog() {
+    constexpr Vector3 fogColor = {0.65f, 0.76f, 0.92f};
+    const float fogStart = (renderDistance_ - 2) * Chunk::CHUNK_SIZE;  // start fading
+    const float fogEnd = renderDistance_ * Chunk::CHUNK_SIZE;          // completely hidden
+
+    const int locFogColor = GetShaderLocation(terrainShader_, "fogColor");
+    const int locFogStart = GetShaderLocation(terrainShader_, "fogStart");
+    const int locFogEnd = GetShaderLocation(terrainShader_, "fogEnd");
+    terrainShader_.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(terrainShader_, "viewPos");
+
+    SetShaderValue(terrainShader_, locFogColor, &fogColor, SHADER_UNIFORM_VEC3);
+    SetShaderValue(terrainShader_, locFogStart, &fogStart, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(terrainShader_, locFogEnd, &fogEnd, SHADER_UNIFORM_FLOAT);
+
+    updateShader();
+}
+
 void Game::init() {
     DisableCursor();
     SetTargetFPS(0);  // Set to maximum FPS
@@ -185,27 +212,16 @@ void Game::init() {
     UpdateLightValues(terrainShader_, CreateLight(LIGHT_DIRECTIONAL, lightPos, Vector3Zero(),
                                                   lightColor, terrainShader_));
 
-    constexpr Vector3 fogColor = {0.65f, 0.76f, 0.92f};
-    constexpr float fogStart = (RENDER_DISTANCE - 2) * Chunk::CHUNK_SIZE;  // start fading
-    constexpr float fogEnd = RENDER_DISTANCE * Chunk::CHUNK_SIZE;          // completely hidden
-
-    const int locFogColor = GetShaderLocation(terrainShader_, "fogColor");
-    const int locFogStart = GetShaderLocation(terrainShader_, "fogStart");
-    const int locFogEnd = GetShaderLocation(terrainShader_, "fogEnd");
-    terrainShader_.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(terrainShader_, "viewPos");
-
-    SetShaderValue(terrainShader_, locFogColor, &fogColor, SHADER_UNIFORM_VEC3);
-    SetShaderValue(terrainShader_, locFogStart, &fogStart, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(terrainShader_, locFogEnd, &fogEnd, SHADER_UNIFORM_FLOAT);
+    updateFog();
 
     const Texture2D textureAtlas = LoadTexture(TEXTURE_ATLAS_PATH.c_str());
     materialAtlas_ = LoadMaterialDefault();
     materialAtlas_.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     materialAtlas_.maps[MATERIAL_MAP_DIFFUSE].texture = textureAtlas;
-    materialAtlas_.shader = terrainShader_;
+    updateShader();
 
-    constexpr double chunksUpperBound =
-        static_cast<float>((RENDER_DISTANCE + M_SQRT1_2) * (RENDER_DISTANCE + M_SQRT1_2)) * M_PI *
+    const double chunksUpperBound =
+        static_cast<float>((renderDistance_ + M_SQRT1_2) * (renderDistance_ + M_SQRT1_2)) * M_PI *
         MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE;
     world_.reserve(static_cast<size_t>(chunksUpperBound));
 
@@ -232,6 +248,19 @@ void Game::init() {
 void Game::run() {
     while (!WindowShouldClose()) {
         player_.update();
+
+        bool updated = false;
+        if (IsKeyDown(KEY_LEFT_ALT)) {
+            if (IsKeyPressed(KEY_KP_ADD) || IsKeyPressedRepeat(KEY_KP_ADD)) {
+                renderDistance_++;
+                updated = true;
+            } else if ((IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressedRepeat(KEY_KP_SUBTRACT)) &&
+                       renderDistance_ > 1) {
+                renderDistance_--;
+                updated = true;
+            }
+        }
+        if (updated) updateFog();
 
         updateTerrain();
 
