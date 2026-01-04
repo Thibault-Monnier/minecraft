@@ -1,9 +1,9 @@
 #pragma once
 
-#include "common/UtilityStructures.hpp"
 #include "Chunk.hpp"
 #include "Player.hpp"
 #include "absl/container/flat_hash_map.h"
+#include "common/UtilityStructures.hpp"
 #include "raylib.h"
 
 class Game {

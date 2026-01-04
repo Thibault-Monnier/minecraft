@@ -15,7 +15,7 @@ bool Game::isPositionInRenderDistance(const Vector3& position) const {
     constexpr float maxDistanceSq =
         RENDER_DISTANCE * RENDER_DISTANCE * Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE;
     return (position.x - player_.getPosition().x) * (position.x - player_.getPosition().x) +
-               (position.z - player_.getPosition().z) * (position.z - player_.getPosition().z) <
+               (position.y - player_.getPosition().y) * (position.y - player_.getPosition().y) <
            maxDistanceSq;
 }
 
@@ -124,20 +124,15 @@ void Game::updateTerrain() {
 
     std::unordered_set<const Chunk*> chunksToUpdateTransforms;
 
-    const auto [playerX, _, playerZ] = player_.getPosition();
+    const auto [playerX, playerY, _] = player_.getPosition();
     const auto playerChunkX = static_cast<int>(playerX / Chunk::CHUNK_SIZE);
-    const auto playerChunkZ = static_cast<int>(playerZ / Chunk::CHUNK_SIZE);
+    const auto playerChunkY = static_cast<int>(playerY / Chunk::CHUNK_SIZE);
     for (int x = -RENDER_DISTANCE; x < RENDER_DISTANCE; x++) {
-        for (int chunkY = 0; chunkY < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; chunkY++) {
-            for (int z = -RENDER_DISTANCE; z < RENDER_DISTANCE; z++) {
-                const int chunkX = playerChunkX + x;
-                const int chunkZ = playerChunkZ + z;
-
-                if (!isPositionInRenderDistance(
-                        Vector3{static_cast<float>(chunkX * Chunk::CHUNK_SIZE) + 0.5f,
-                                static_cast<float>(chunkY * Chunk::CHUNK_SIZE) + 0.5f,
-                                static_cast<float>(chunkZ * Chunk::CHUNK_SIZE) +
-                                    0.5f})) {  // Center of the chunk
+        const int chunkX = playerChunkX + x;
+        for (int y = -RENDER_DISTANCE; y < RENDER_DISTANCE; y++) {
+            const int chunkY = playerChunkY + y;
+            for (int chunkZ = 0; chunkZ < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; chunkZ++) {
+                if (!isPositionInRenderDistance(Chunk::getCenterPosition(chunkX, chunkY, chunkY))) {
                     continue;
                 }
 
@@ -147,9 +142,9 @@ void Game::updateTerrain() {
                 }
 
                 Chunk& chunk = generateChunk(position);
-
-                auto adjacentChunks = findAdjacentChunks(chunk);
                 chunksToUpdateTransforms.insert(&chunk);
+
+                const auto adjacentChunks = findAdjacentChunks(chunk);
                 for (const auto& adjacentChunk : adjacentChunks) {
                     if (adjacentChunk &&
                         isPositionInRenderDistance(adjacentChunk->get().getCenterPosition())) {
@@ -185,7 +180,7 @@ void Game::init() {
     const int ambLoc = GetShaderLocation(terrainShader_, "ambient");
     SetShaderValue(terrainShader_, ambLoc, ambient, SHADER_UNIFORM_VEC4);
 
-    constexpr Vector3 lightPos = {5000.0f, 15000.0f, 7500.0f};
+    constexpr Vector3 lightPos = {5000.0f, 7500.0f, 15000.0f};
     constexpr Color lightColor = {170, 170, 170, 255};
     UpdateLightValues(terrainShader_, CreateLight(LIGHT_DIRECTIONAL, lightPos, Vector3Zero(),
                                                   lightColor, terrainShader_));
@@ -216,19 +211,19 @@ void Game::init() {
 
     // Generate spawn chunks first to know the starting position for accurate render distance
     const double startTime = GetTime();
-    for (int y = 0; y < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; y++) {
-        generateChunk({0, y, 0});
+    for (int z = 0; z < MAP_HEIGHT_BLOCKS / Chunk::CHUNK_SIZE; z++) {
+        generateChunk({0, 0, z});
     }
 
     // Determine the starting position
-    int startY = 0;
-    while (world_.at({0, startY / Chunk::CHUNK_SIZE, 0})
-               ->getData()[0][startY % Chunk::CHUNK_SIZE][0]
+    int startZ = 0;
+    while (world_.at({0, 0, startZ / Chunk::CHUNK_SIZE})
+               ->getData()[0][0][startZ % Chunk::CHUNK_SIZE]
                .type() != BlockType::BLOCK_AIR) {
-        startY++;
+        startZ++;
     }
-    startY += 2;                                                    // Start above the ground
-    player_.setPosition({0.5f, static_cast<float>(startY), 0.5f});  // Middle of the block
+    startZ += 2;                                                    // Start above the ground
+    player_.setPosition({0.5f, 0.5f, static_cast<float>(startZ)});  // Middle of the block
 
     // Generate the remaining chunks
     updateTerrain();

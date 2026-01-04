@@ -15,20 +15,20 @@ void Block::generateBlockMesh(const Vector3Int& position, std::vector<Vertex>& c
     };
 
     static constexpr Face faces[6] = {
-        // +X (east)
-        {{1, 1, 0}, {0, 0, 1}, {0, -1, 0}, {1, 0, 0}},
-        // -X (west)
-        {{0, 1, 1}, {0, 0, -1}, {0, -1, 0}, {-1, 0, 0}},
+        // +X (right)
+        {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 0, 0}},
+        // -X (left)
+        {{0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {-1, 0, 0}},
 
-        // +Y (top)
-        {{0, 1, 0}, {0, 0, 1}, {1, 0, 0}, {0, 1, 0}},
-        // -Y (bottom)
+        // +Y (front)
+        {{1, 1, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 1, 0}},
+        // -Y (back)
         {{0, 0, 0}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0}},
 
-        // +Z (back)
-        {{1, 1, 1}, {-1, 0, 0}, {0, -1, 0}, {0, 0, 1}},
-        // -Z (front)
-        {{0, 1, 0}, {1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+        // +Z (top)
+        {{0, 0, 1}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+        // -Z (bottom)
+        {{0, 1, 0}, {-1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
     };
 
     auto appendQuad = [&](const Vector3Int& origin, const Vector3Int& edgeDirU,
@@ -36,20 +36,20 @@ void Block::generateBlockMesh(const Vector3Int& position, std::vector<Vertex>& c
         const int startIndex = static_cast<int>(chunkMeshVerts.size());
 
         Rectangle textureRect;
-        if (faceNormal == Vector3Int{0, 1, 0}) {
+        if (faceNormal == Vector3Int{0, 0, 1}) {
             textureRect = textureRectTop();
-        } else if (faceNormal == Vector3Int{0, -1, 0}) {
+        } else if (faceNormal == Vector3Int{0, 0, -1}) {
             textureRect = textureRectBottom();
         } else [[likely]] {
             textureRect = textureRectSides();
         }
 
         const float u0 = textureRect.x / static_cast<float>(textureAtlas.width);
-        const float v0 = textureRect.y / static_cast<float>(textureAtlas.height);
         const float u1 =
             (textureRect.x + textureRect.width) / static_cast<float>(textureAtlas.width);
+        const float v0 = 1.0f - textureRect.y / static_cast<float>(textureAtlas.height);
         const float v1 =
-            (textureRect.y + textureRect.height) / static_cast<float>(textureAtlas.height);
+            1.0f - (textureRect.y + textureRect.height) / static_cast<float>(textureAtlas.height);
 
         const Vector2 textureCoordBL{u0, v0};
         const Vector2 textureCoordBR{u1, v0};

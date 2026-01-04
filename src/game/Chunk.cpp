@@ -7,14 +7,14 @@
 #include "PerlinNoise.h"
 #include "raymath.h"
 
-float fBm(const float x, const float z, const int octaves, const float lacunarity, const float gain,
+float fBm(const float x, const float y, const int octaves, const float lacunarity, const float gain,
           const int seed) {
     float amplitude = 1.0f;
     float frequency = 1.0f;
     float sum = 0.0f;
     for (int i = 0; i < octaves; i++) {
         sum += amplitude *
-               stb_perlin_noise3_seed(x * frequency, z * frequency, 0.0f, 0, 0, 0, seed + i);
+               stb_perlin_noise3_seed(x * frequency, y * frequency, 0.0f, 0, 0, 0, seed + i);
         amplitude *= gain;
         frequency *= lacunarity;
     }
@@ -31,14 +31,14 @@ float computeMaxAmplitude(const int octaves, const float gain) {
     return maxAmp;
 }
 
-int getHeight(const int x, const int z, const int seed, const int maxWorldHeight) {
+int getHeight(const int x, const int y, const int seed, const int maxWorldHeight) {
     constexpr int octaves = 6;
     constexpr float lacunarity = 2.0f;
     constexpr float gain = 0.5f;
     constexpr float noiseScale = 0.005f;  // tweak as needed
 
     // raw fBM in [ -maxAmp, +maxAmp ]
-    const float raw = fBm(static_cast<float>(x) * noiseScale, static_cast<float>(z) * noiseScale,
+    const float raw = fBm(static_cast<float>(x) * noiseScale, static_cast<float>(y) * noiseScale,
                           octaves, lacunarity, gain, seed);
 
     // normalize to [-1,1]
@@ -49,7 +49,7 @@ int getHeight(const int x, const int z, const int seed, const int maxWorldHeight
     const float normalized = (n + 1.0f) * 0.5f;
 
     //   Option A: linear map to [0, maxWorldHeight]
-    // float h = normalized * maxWorldHeight;
+    // const float height = normalized * maxWorldHeight;
 
     //   Option B: exponential for spikier relief
     const float height = std::pow(normalized, 4.0f) * static_cast<float>(maxWorldHeight);
@@ -70,10 +70,10 @@ void Chunk::generate(const int seed, const int maxHeight) {
     // uint64_t startCycles = 0;
 
     for (int x = 0; x < CHUNK_SIZE; x++) {
-        for (int z = 0; z < CHUNK_SIZE; z++) {
-            const int realHeight = getHeight(localToGlobalX(x), localToGlobalZ(z), seed, maxHeight);
+        for (int y = 0; y < CHUNK_SIZE; y++) {
+            const int realHeight = getHeight(localToGlobalX(x), localToGlobalY(y), seed, maxHeight);
 
-            if (localToGlobalY(0) >= realHeight) {
+            if (localToGlobalZ(0) >= realHeight) {
                 continue;
             }
 
@@ -88,20 +88,20 @@ void Chunk::generate(const int seed, const int maxHeight) {
             constexpr int minGenerationHeight =
                 24;  // if the terrain is too low, fill it with water
 
-            const int lastY =
-                std::min(std::max(realHeight, minGenerationHeight) - localToGlobalY(0), CHUNK_SIZE);
-            for (int localY = 0; localY < lastY; localY++) {
-                const int globalYToRealHeight = localToGlobalY(localY);
-                if (globalYToRealHeight < minGenerationHeight) {
-                    data_[x][localY][z] = Block{BlockType::BLOCK_WATER};
-                } else if (globalYToRealHeight < minGenerationHeight + 2) {
-                    data_[x][localY][z] = Block{BlockType::BLOCK_SAND};
-                } else if (globalYToRealHeight <= realHeight - 4) {
-                    data_[x][localY][z] = Block{BlockType::BLOCK_STONE};
-                } else if (globalYToRealHeight <= realHeight - 2) {
-                    data_[x][localY][z] = Block{BlockType::BLOCK_DIRT};
-                } else if (globalYToRealHeight < realHeight) {
-                    data_[x][localY][z] = Block{BlockType::BLOCK_GRASS};
+            const int lastZ =
+                std::min(std::max(realHeight, minGenerationHeight) - localToGlobalZ(0), CHUNK_SIZE);
+            for (int localZ = 0; localZ < lastZ; localZ++) {
+                const int globalZToRealHeight = localToGlobalZ(localZ);
+                if (globalZToRealHeight < minGenerationHeight) {
+                    data_[x][y][localZ] = Block{BlockType::BLOCK_WATER};
+                } else if (globalZToRealHeight < minGenerationHeight + 2) {
+                    data_[x][y][localZ] = Block{BlockType::BLOCK_SAND};
+                } else if (globalZToRealHeight <= realHeight - 4) {
+                    data_[x][y][localZ] = Block{BlockType::BLOCK_STONE};
+                } else if (globalZToRealHeight <= realHeight - 2) {
+                    data_[x][y][localZ] = Block{BlockType::BLOCK_DIRT};
+                } else if (globalZToRealHeight < realHeight) {
+                    data_[x][y][localZ] = Block{BlockType::BLOCK_GRASS};
                 }
             }
 

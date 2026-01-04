@@ -21,10 +21,15 @@ class Chunk {
     [[nodiscard]] int getY() const { return chunkY_; }
     [[nodiscard]] int getZ() const { return chunkZ_; }
 
+    [[nodiscard]] static Vector3 getCenterPosition(const int chunkX, const int chunkY,
+                                                   const int chunkZ) {
+        return {(static_cast<float>(chunkX) + 0.5f) * CHUNK_SIZE,
+                (static_cast<float>(chunkY) + 0.5f) * CHUNK_SIZE,
+                (static_cast<float>(chunkZ) + 0.5f) * CHUNK_SIZE};
+    }
+
     [[nodiscard]] Vector3 getCenterPosition() const {
-        return {(static_cast<float>(chunkX_) + 0.5f) * CHUNK_SIZE,
-                (static_cast<float>(chunkY_) + 0.5f) * CHUNK_SIZE,
-                (static_cast<float>(chunkZ_) + 0.5f) * CHUNK_SIZE};
+        return getCenterPosition(chunkX_, chunkY_, chunkZ_);
     }
 
     void generate(int seed, int maxHeight);
@@ -61,8 +66,6 @@ class Chunk {
     [[nodiscard]] int localToGlobalX(const int x) const { return chunkX_ * CHUNK_SIZE + x; }
     [[nodiscard]] int localToGlobalY(const int y) const { return chunkY_ * CHUNK_SIZE + y; }
     [[nodiscard]] int localToGlobalZ(const int z) const { return chunkZ_ * CHUNK_SIZE + z; }
-
-    [[nodiscard]] int globalToLocalY(const int y) const { return y - chunkY_ * CHUNK_SIZE; }
 
     [[nodiscard]] Texture2D& textureAtlas() const {
         return materialAtlas_.maps[MATERIAL_MAP_DIFFUSE].texture;
