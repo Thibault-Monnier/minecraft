@@ -70,7 +70,8 @@ void Block::generateBlockMesh(const Vector3Int& position, std::vector<Vertex>& c
     };
 
     for (int i = 0; i < 6; ++i) {
-        if (!isFaceVisible[i]) continue;
+        if (!isFaceVisible[i]) [[likely]]
+            continue;
 
         const Face& face = faces[i];
         const Vector3Int origin = {position.x + face.originOffset.x,
