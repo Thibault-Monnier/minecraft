@@ -11,6 +11,11 @@ class Block {
     Block() = default;
     explicit Block(const BlockType type) : type_(type) {}
 
+    [[nodiscard]] static Block& stoneBlock() {
+        static Block stoneBlockInstance(BlockType::BLOCK_STONE);
+        return stoneBlockInstance;
+    }
+
     [[nodiscard]] bool isRendered() const { return blockTypeData().isRendered; }
     [[nodiscard]] BlockType type() const { return type_; }
 

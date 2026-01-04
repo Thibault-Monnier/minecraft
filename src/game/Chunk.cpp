@@ -30,7 +30,23 @@ float computeMaxAmplitude(const int octaves, const float gain) {
     return maxAmp;
 }
 
+struct Key {
+    int x, y;
+
+    bool operator==(const Key& other) const noexcept { return x == other.x && y == other.y; }
+};
+
+struct KeyHash {
+    size_t operator()(Key k) const noexcept { return (uint64_t(k.x) << 32) ^ uint32_t(k.y); }
+};
+
+static std::unordered_map<Key, int, KeyHash> heightCache;
+
 int getHeight(const int x, const int y, const int seed, const int maxWorldHeight) {
+    if (const auto it = heightCache.find(Key{x, y}); it != heightCache.end()) {
+        return it->second;
+    }
+
     constexpr int octaves = 6;
     constexpr float lacunarity = 2.0f;
     constexpr float gain = 0.5f;
@@ -58,6 +74,8 @@ int getHeight(const int x, const int y, const int seed, const int maxWorldHeight
     // const float heightExponentiated = std::pow(normalized, 3.0f) * 120.0f;  // [0, 120]
     // const float height =
     //     heightLinear * (1 - normalized) + heightExponentiated * normalized + 4;  // [4, 124]
+
+    heightCache[Key{x, y}] = static_cast<int>(std::ceil(height));
 
     return static_cast<int>(std::ceil(height));
 }
@@ -125,7 +143,8 @@ void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
     chunkMesh_ = {};
 
     auto dataWithSentinel = [&](const int x, const int y, const int z) -> Block {
-        if (x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
+        if (x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE)
+            [[likely]] {
             return data_[x][y][z];
         }
         if (x < 0 && adjacentChunkNegativeX)
@@ -142,7 +161,7 @@ void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
             return adjacentChunkPositiveZ->get().data_[x][y][0];
 
         // No chunk there
-        return Block{BlockType::BLOCK_STONE};  // Solid block to avoid rendering
+        return Block::stoneBlock();  // Solid block to avoid rendering
     };
 
     std::vector<Vertex> vertices;
@@ -199,7 +218,7 @@ void Chunk::generateTransforms(const OptionalRef<Chunk> adjacentChunkPositiveX,
     chunkMesh_.texcoords = meshUVs_.data();
     chunkMesh_.indices = meshIndices_.data();
 
-    UploadMesh(&chunkMesh_, false);
+    if (chunkMesh_.vertexCount > 0) UploadMesh(&chunkMesh_, false);
 
     if (adjacentChunkPositiveX && adjacentChunkNegativeX && adjacentChunkPositiveY &&
         adjacentChunkNegativeY && adjacentChunkPositiveZ && adjacentChunkNegativeZ) {
